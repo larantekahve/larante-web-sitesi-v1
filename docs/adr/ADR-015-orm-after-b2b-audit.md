@@ -17,8 +17,8 @@ ARCH §5.6: "B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelik
 2. **Tek ORM = Drizzle ORM** (`drizzle-orm` + `drizzle-kit`, Postgres sürücüsü). Migration'lar drizzle-kit ile üretilir, **elle gözden geçirilir** ve düz SQL olarak repoya girer; forward-only; destructive değişiklik iki aşamalı (expand → migrate → contract); AI-üretimi migration doğrudan prod'a uygulanmaz (ARCH §78).
 3. Yarış-kritik ifadeler (rezervasyon UPDATE, SKIP LOCKED, sequence) Drizzle'ın `sql` şablonuyla açık SQL olarak yazılır ve review edilir; ham SQL yalnız `packages/db` repository implementasyonlarında ve migration dosyalarında.
 4. Platform repo'sunda Prisma/TypeORM/Kysely **yasak** (lint + dependency review). B2B'ye ORM eklenmez.
-5. **İki-ORM riski aynı domain için yoktur:** B2B (D1/SQLite, ham SQL) ile platform (Postgres, Drizzle) hiçbir tablo, migration veya bağlantı paylaşmaz; tek bağ HTTP sözleşmesi (ADR-001) + `product_external_codes` (ADR-004). Gerçek risk şema **çiftlenmesi**dir (B2B `products` projeksiyonu vs platform `products`) — bu, "B2B'de katalog migration'ları dondurulur, ad/kategori B2B'de düzenlenmez" kuralıyla sınırlanır.
-6. Tipler: para `INTEGER` kuruş, oranlar basis point `INTEGER`, miktar `INTEGER CHECK(>0)`; `REAL/float` yasak (B2B'nin REAL borcu taşınmaz). Tüm id UUID.
+5. **İki-ORM riski aynı domain için yoktur:** B2B (D1/SQLite, ham SQL) ile platform (Postgres, Drizzle) hiçbir tablo, migration veya bağlantı paylaşmaz; tek bağ HTTP sözleşmesi (ADR-001) + `variant_external_codes` (ADR-004 §3.4, ADR-016 K6 — 2026-09-16 öncesi `product_external_codes`). Gerçek risk şema **çiftlenmesi**dir (B2B `products` projeksiyonu vs platform `products`) — bu, "B2B'de katalog migration'ları dondurulur, ad/kategori B2B'de düzenlenmez" kuralıyla sınırlanır.
+6. Tipler: para `INTEGER` kuruş, oranlar basis point `INTEGER`; **miktarlar tamsayı** — bakiyeler (`on_hand`, `reserved`) `INTEGER CHECK (>= 0)`, fiziksel hareket ve rezervasyon olayı miktarları `INTEGER CHECK (> 0)` + açık yön / aksiyon (işaretli delta yok; ayrıntı ADR-016 K2); `REAL/float` yasak (B2B'nin REAL borcu taşınmaz). Tüm id UUID.
 
 ## Reddedilenler
 - **Prisma:** zengin DSL/tooling; ancak satır kilidi/atomik UPDATE için raw SQL'e düşülür, motor ikili dosyası/Data Proxy bağımlılığı; "B2B Prisma ise" koşulu boş.
@@ -28,4 +28,4 @@ ARCH §5.6: "B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelik
 Drizzle'ın relational API'si Prisma kadar olgun değil; karşılığında migration SQL'i şeffaf ve DB kısıtları doğrudan yazılır. Concurrency integration testleri (gerçek Postgres) CI kapısıdır.
 
 ## İlgili
-ADR-001, ADR-004, ADR-016.
+ADR-001, ADR-004, ADR-016 (stok miktar modeli / rezervasyon sözleşmesi — tip kuralının kaynağı), ADR-017 (deployment; eski "ADR-016" numarası).

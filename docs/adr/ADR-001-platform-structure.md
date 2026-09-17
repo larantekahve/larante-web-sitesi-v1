@@ -29,4 +29,4 @@ ARCH §4 monorepo önerir ("`apps/b2b` şimdilik zorunlu olarak taşınmaz; audi
 İki CI, iki sürüm zinciri; sözleşme drift'i contract test + semver (v1 dondurulur, breaking = v2) ile yönetilir. Ortak UI paketi paylaşılmaz (B2B UI inline stil, paylaşım hedefi değil).
 
 ## İlgili
-ADR-004 (ownership), ADR-015 (ORM), ADR-016 (deployment).
+ADR-004 (ownership), ADR-015 (ORM), ADR-016 (stok miktar modeli ve B2B rezervasyon sözleşmesi — `internal.b2b-integration.v1` uçlarının kaynağı), ADR-017 (deployment; 2026-09-16 öncesi "ADR-016" olarak anılıyordu).
