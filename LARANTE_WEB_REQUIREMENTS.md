@@ -2,7 +2,7 @@
 
 **Dosya:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Sürüm:** 1.0  
-**Revizyon:** 1.1 — 2026-09-16 (stok ve B2B sipariş-rezervasyon kuralları: §31.1–31.8, §41–42, §51, §80–83, §117–118, R13–R18; teknik sözleşme `docs/adr/ADR-016`; ikinci tur 2026-09-16: B6k kararı, kiracı izolasyonu, tekrar sipariş, DB tamsayı guard'ları)  
+**Revizyon:** 1.2 — 2026-09-17 (Phase 0 iş kararı paketi 2: B6a/B6e net içerik ≠ stok birimi ve birim sınıfları, B6d açılış sayımı, B6f eskalasyon yetkisi / saati, B6g stok eksikliği politikası, B6h ADR-004 istisna onayı, B6i satın alma maliyeti kaynağı, B4d KDV kaynağı, B5 public satış kapsamı, B3 mimari yön; etkilenen bölümler: §7.1, §12–§14, §19–§21, §30, §31.1–31.4, §77, §80–§83, §110, §115, §117–§118) · 1.1 — 2026-09-16 (stok ve B2B sipariş-rezervasyon kuralları: §31.1–31.8, §41–42, §51, §80–83, §117–118, R13–R18; teknik sözleşme `docs/adr/ADR-016`; ikinci tur 2026-09-16: B6k kararı, kiracı izolasyonu, tekrar sipariş, DB tamsayı guard'ları)  
 **Tarih:** 2026-09-15  
 **Durum:** Onaylanmış ana gereksinimler  
 **Kapsam:** Larante Coffee Roastery kurumsal web sitesi, B2C e-ticaret, Larante Akademi, içerik, lead yönetimi ve web yönetim paneli.  
@@ -139,6 +139,7 @@ B2B girişi header içinde belirgin olacaktır; ana sayfada ayrı büyük B2B re
 
 - Son tüketiciye satış yapılır.
 - Fiyatlar **KDV dahil** gösterilir.
+- **KDV oranı kaynağı (B4d — karar 2026-09-17):** ürün KDV oranı varyant bazlıdır. V1'de kontrollü Excel ürün verisinden / içe aktarımından gelir ve **tam ürün / varyanta** eşlenir; belirsiz ya da eksik eşleme fail-closed'dır (inceleme gerektirir) — kategoriye göre KDV tahmini yapılmaz. Sonraki aşamada Logo SQL salt-okunur entegrasyonu geldiğinde Logo malzeme kartı KDV verisi kaynak olur (yalnız SELECT; platform Logo'ya KDV verisi yazmaz). Her sipariş satırı, sipariş oluşturulurken uygulanan KDV oranını snapshot'lar; sonraki KDV değişiklikleri geçmiş siparişleri değiştirmez. Belirli ürünlerin oranı proje verisinden doğrulanmadan yazılmaz.
 - Public fiyat B2B fiyatından bağımsızdır.
 - Kurumsal bir müşteri public mağazadan alışveriş yaparsa public perakende fiyatını görür.
 
@@ -299,6 +300,13 @@ Toz Grubu
 
 **Donuk ürün grubu public web satış kapsamında değildir.** Donuk pasta stok / kutu kuralları (§31.3) paylaşımlı envanter ve B2B siparişi için yine bağlayıcıdır.
 
+**B5 — karar 2026-09-17 (public satış kapsamı ve kanal uygunluğu):**
+
+- Public B2C checkout, **donuk grup hariç** tüm onaylı ürün gruplarını satabilir. Donuk grup = donuk pastalar, Frozen Lemonade (2 L) ve Frozen Orange Juice (2 L). Donuk ürünler B2B kanalında satılmaya ve paylaşımlı yetkili envanterde yer almaya devam eder; public B2C checkout ile satın alınamaz.
+- Public satılabilir kategori yönü: **Kahve** (Espresso, Filtre) · **Aroma Grubu** (Şuruplar, Meyve Püreleri, Bar Sosları, Bazlar) · **Toz Grubu** (Milkshake, Frappe, Sıcak Çikolata, Beyaz Çikolata, Sahlep) · **Çay Grubu** (100 g / 250 g / 300 g gibi tam satılabilir varyantlar ve uygulanabildiği ölçüde demlik poşet çay). Bu liste onaylı gruplar için yön verir; kategori yapısı yine admin'den genişletilebilir.
+- Donuk ürünler public kurumsal siteden tamamen gizlenmez: **"İşletmelere Özel"** / yalnız işletmelere yönelik katalog ya da lead üretimi teklifi olarak gösterilebilir; normal B2C "Sepete Ekle" / checkout aksiyonu sunulmaz; yerine iletişim / teklif talebi / B2B'ye yönlendiren CTA kullanılır.
+- **Kategori taksonomisi ile kanal uygunluğu ayrı kavramlardır:** bir ürün public'te görünür olup B2C satın alımına kapalı olabilir; public görünürlük B2C satılabilirlik anlamına gelmez.
+
 Kategori yapısı admin panelinden genişletilebilir olmalıdır.
 
 ---
@@ -313,7 +321,7 @@ Kahve
 └── Özel Seri
 ```
 
-Espresso ve Filtre aynı blend ismini taşısalar dahi ayrı ürün olarak listelenebilir.
+Espresso ve Filtre aynı blend ismini taşısalar dahi ayrı ürün olarak listelenebilir; envanterde **ayrı varyant / SKU**'durlar (B6a — karar 2026-09-17).
 
 Örnek:
 
@@ -333,6 +341,8 @@ Standart seçenekler:
 - 1000 g
 
 Ürün bazında seçenekler açılıp kapatılabilir.
+
+**Net içerik ≠ stok birimi (B6a/B6e — karar 2026-09-17):** gramaj ürünün net içeriğidir, stok birimi değildir; her gramaj ayrı SKU'dur ve ticari stok birimi **PAKET** olarak sayılır (1 kg ürün kg ile izlenmez). Onaylı mevcut kahve SKU'ları 1 kg pakettir (Cappadocia / Kanesh / Lusso / Mercantily Espresso; Cappadocia / Lusso Filter); 250 g / 500 g perakende SKU'larının varlığı veri görevidir (seçenekler korunur). Bkz. §31.2.
 
 ---
 
@@ -452,8 +462,11 @@ Alt kategoriler:
 Aroma Grubu
 ├── Şuruplar
 ├── Meyve Püreleri
-└── Bar Sosları
+├── Bar Sosları
+└── Bazlar
 ```
+
+Stok / satış birimi: Şuruplar (750 ml), Meyve Püreleri (1 kg), Bar Sosları (2,5 kg) ve Bazlar (2,5 kg) **ŞİŞE** olarak sayılır ve satılır; net içerik tanımlayıcıdır, ml / kg ile envanter tutulmaz (B6a/B6e — karar 2026-09-17; §31.2).
 
 Yeni alt kategori ihtiyacı çıkarsa admin tarafından genişletilebilir.
 
@@ -469,7 +482,7 @@ Başlangıç ürün aileleri arasında:
 - Beyaz Çikolata
 - Sahlep
 
-bulunabilir.
+bulunabilir. Onaylı mevcut toz SKU'ları 1 kg **PAKET** olarak sayılır ve satılır (B6a/B6e — karar 2026-09-17; §31.2).
 
 Liste sabit değildir. Yeni toz ürünler kod değişikliği gerektirmeden eklenebilmelidir.
 
@@ -490,6 +503,8 @@ Sistem aşağıdaki gibi genişleyebilir:
 ```
 
 Kategori ve ürün yapısı veri odaklı olacaktır.
+
+**Satılabilir çay varyantları (B6a/B6e — karar 2026-09-17):** normal çaylar 100 g, 250 g ya da 300 g olabilir — her tam gramaj ayrı satılabilir varyant / SKU'dur ve **PAKET** olarak sayılır; **demlik poşet çay** (net içerik 6 kg) **ADET** olarak sayılır ve satılır (1, 2, 3 … adet; envanterden kg ile satılmaz).
 
 ---
 
@@ -645,6 +660,8 @@ Public sitede kesin stok adedi gösterilmez.
 
 "Stok varsa" = **kullanılabilir stok** (fiziksel − rezerve) > 0; bkz. §31.1.
 
+**Kanal uygunluğu (B5 — karar 2026-09-17):** "Sepete Ekle" yalnız public satılabilir (B2C kanalına uygun) ürünlerde ve kullanılabilir stok > 0 iken gösterilir. Donuk grup (donuk pastalar, Frozen Lemonade, Frozen Orange Juice) public sitede **"İşletmelere Özel"** olarak gösterilir: "Sepete Ekle" ya da "Stokta Yok" yerine iletişim / teklif talebi CTA'sı sunulur, stok durumu gösterilmez; checkout bu ürünleri sunucu tarafında reddeder.
+
 ---
 
 # 31. Tek Stok Kaynağı Kuralı
@@ -680,6 +697,7 @@ Kurallar:
 - **İptal ya da ret (sipariş düzeyinde, tek işlem) ve miktar azaltma** rezervasyonu serbest bırakır; fiziksel stoğa dokunmaz. Açık bir siparişin rezervasyonu siparişten **bağımsız** serbest bırakılmaz (§31.4, R18).
 - Fiziksel stok hareketleri (giriş, sevkiyat, iade girişi, hasar/fire çıkışı, sayım/manuel düzeltme) yalnız fiziksel stoğu; rezervasyon işlemleri (rezerve et, serbest bırak, sevkiyatla kapat) yalnız rezerve stoğu değiştirir. İki grup birbirine karıştırılmaz.
 - "Stok varsa" (§30) her zaman **kullanılabilir stok > 0** demektir.
+- **Fiziksel stok eksikliği (B6g — karar 2026-09-17):** sayım, hasar, fire ya da düzeltme sonucu fiziksel stok rezerve stoğun altına düşerse (`on_hand < reserved`) sistem mevcut rezervasyonları **otomatik olarak azaltmaz, yeniden atamaz, serbest bırakmaz ya da iptal etmez**; rezervasyonlar yetkili iş kararına kadar olduğu gibi kalır. Etkilenen varyanta yeni rezervasyon tahsisi eksiklik sürdüğü sürece engellenir; kritik stok-eksikliği uyarısı üretilir ve etkilenen rezervasyonlar / siparişler yönetime gösterilir. Hangi müşteri / siparişin (varsa) etkileneceğine **yalnız Yönetici** karar verir — yazılım en yeni / en eski sipariş, B2B / B2C önceliği, en yüksek değerli müşteri gibi bir ticari önceliği kendiliğinden seçmez. Yönetici hatalı sayımı düzeltebilir, rezervasyonları koruyarak ikmali bekleyebilir, siparişi onaylı miktar değişikliği akışıyla (§31.5) azaltabilir ya da onaylı iptal akışıyla (§31.4, §31.6) iptal / ret edebilir; her müdahale kim, ne zaman, neden ve hangi sipariş(ler) bilgisiyle Audit Log'a yazılır. `reserved <= on_hand` veritabanı düzeyinde sert kısıt değildir (ADR-016 K2/8). Bu yasak yalnız stok eksikliğinin tetiklediği otomatik ticari tahsis değişikliklerini kapsar; ödenmemiş web rezervasyonunun süresinin dolması (§42) ve gerçek teknik sahipsiz rezervasyonun mutabakatla onarımı (§31.8) eksiklik sırasında da kendi kurallarıyla uygulanır.
 
 Teknik sözleşme: ARCH V2.1 §16–17, `docs/adr/ADR-016`.
 
@@ -688,11 +706,11 @@ Teknik sözleşme: ARCH V2.1 §16–17, `docs/adr/ADR-016`.
 - Sipariş, stok, rezervasyon, sevkiyat, iade, hasar ve stok düzeltmesi dahil **hiçbir yerde kesirli miktar yoktur**; tüm operasyonel miktarlar tam sayıdır.
 - Her satılabilir varyantın tanımlı bir **ticari stok birimi** vardır (paket, şişe, kutu, koli, adet …). Stok bu birimle sayılır, sipariş bu birimle verilir.
 - Belirsiz ya da kesirli kutu-birim dönüşümü kullanılmaz. B2B'de koli ile sipariş yalnız tam sayı katı olarak mümkündür (koli adedi × koli içi adet, ikisi de tam sayı) ve koli içi adet sipariş satırına o anki değeriyle kaydedilir. Ticari birimi zaten koli olan üründe dönüşüm yoktur. Her sipariş satırı, müşterinin girdiği miktar ve birimin yanında **stok birimi cinsinden miktarı** da saklar; stok, rezervasyon ve mutabakat yalnız bu miktarı kullanır.
-- Hangi varyantların yalnız koli ile satıldığı proje sahibi tarafından belirlenir (Phase 0 karar listesi B6e — açık).
+- **Birim sınıfları (B6a/B6e — karar 2026-09-17):** ürünün net içeriği ile operasyonel stok birimi ayrı kavramlardır; ticari stok birimi Larante'nin bitmiş ürünü nasıl sattığı ve saydığıyla belirlenir. Onaylı gruplar: **PAKET** — 1 kg kahve (espresso ve filtre ayrı SKU), 1 kg toz ürünler, 100 / 250 / 300 g çay (her gramaj ayrı SKU); **ŞİŞE** — 750 ml şurup, 1 kg meyve püresi, 2,5 kg bar sosu, 2,5 kg baz; **ADET** — 6 kg demlik poşet çay, 2 L Frozen Lemonade, 2 L Frozen Orange Juice; **KUTU** — donuk pasta (§31.3). Net içerik modellendiğinde tamsayı taban birimle (ör. 2500 g, 750 ml, 2000 ml) tanımlayıcı bilgidir, operasyonel envanter miktarı değildir. Onaylı gruplarda ticari birimi koli olan varyant yoktur; B2B koli ile sipariş kuralı (yukarıda) değişmez. Bu liste onaylı başlangıç eşlemesidir: listede olmayan mevcut B2B satırları, kahvenin kavrum ekseni ve varyant başına koli içi adet / kutu içi parça sayısı verisi Phase 0 karar listesi B6a / B6e'de **veri görevi** olarak açıktır.
 
 ## 31.3 Donuk Pasta Kutu Kuralı
 
-Donuk pasta grubu public web'de satılmaz (§12, §115); ancak paylaşımlı envanterde ve B2B siparişinde şu kurallar bağlayıcıdır:
+Donuk pasta grubu public web'de satılmaz (§12, §115); ancak paylaşımlı envanterde ve B2B siparişinde şu kurallar bağlayıcıdır (**KUTU kuralı yalnız donuk pastalar içindir; donuk içecekler — Frozen Lemonade / Frozen Orange Juice — ADET birimiyle §31.2'ye tabidir**):
 
 - Stok ve sipariş birimi **kutudur**.
 - Yarım kutu, kısmi kutu ya da dilim düzeyinde stok hareketi yoktur.
@@ -700,6 +718,7 @@ Donuk pasta grubu public web'de satılmaz (§12, §115); ancak paylaşımlı env
 - Farklı kutu içeriği ya da dilim sayısı **ayrı varyanttır** (ayrı SKU).
 - Her varyantın kendi kutu içeriği, satın alma maliyeti, satış fiyatı, dilim başına bilgi amaçlı fiyatı ve **bağımsız stoğu** vardır.
 - Kutu içeriği tanımlayıcı bilgidir; envanter daima **tam kutu** olarak sayılır.
+- **Kutu içi parça sayısı (B6a/B6e — karar 2026-09-17):** cheesecake 12 dilim; dilimli pastalar 12 dilim; mono ürünlerde ürüne özgü (8, 9, 10 ya da onaylı başka bir tam sayı); cup ürünlerde ürüne özgü — mono ya da cup için **kategori geneli tek değer tanımlanmaz**, her pasta SKU'su kendi kutu içi parça sayısını, satın alma maliyetini ve satış fiyatını taşır; ürüne özgü sayılar SKU veri tablosundan gelir (icat edilmez). Bu değer B2B koli dönüşümündeki "koli içi adet" (§31.2) **değildir**. Kutu konfigürasyonu maddi olarak değişirse (ör. 8'li kutudan 10'lu kutuya) geçmiş bütünlüğü için **yeni ticari varyant / SKU** açılır; geçmiş sipariş anlamı yeniden yazılmaz. Sipariş satırı uygulanan kutu konfigürasyonunu ve satış fiyatını snapshot'lar; geçmiş kârlılık için satın alma maliyeti snapshot'ı da §82 (B6i) kuralına tabidir.
 
 ## 31.4 B2B Sipariş Rezervasyonu
 
@@ -729,7 +748,7 @@ Sipariş gönderildi → "İşleniyor" (rezervasyon bekleniyor)
 - Serbest bırakma her zaman **kim, ne zaman, neden** bilgisiyle kaydedilir (Audit Log). **Açık bir B2B siparişinin rezervasyonu hiçbir zaman siparişten bağımsız serbest bırakılmaz** (B6k — karar 2026-09-16): rezervasyon serbest bırakılacaksa sipariş **reddedilir ya da iptal edilir**; sipariş iptali / reddi, varsa cari ters kaydı ve rezervasyonun serbest bırakılması **tek, sipariş düzeyinde, idempotent bir iptal işlemidir** (tekrarı aynı sonucu verir, cari bakiye bir kez hareket eder). Siparişi açık bırakıp yalnız rezervasyonunu düşüren ya da azaltan **hiçbir admin aksiyonu sunulmaz** (miktar azaltma sipariş satırını değiştiren ayrı bir işlemdir, bağımsız serbest bırakma değildir). Deterministik mutabakat yalnız **karşılığında gerçek sipariş bulunmayan teknik sahipsiz rezervasyonu** mevcut mutabakat sözleşmesine göre serbest bırakabilir (§31.8).
 - Teknik olarak sahipsiz kalan rezervasyonlar (karşılığında gerçek sipariş satırı olmayan) mutabakat süreciyle onarılabilir.
 
-Eskalasyon aktörünün rolü ve onayın 72 saat saatini sıfırlayıp sıfırlamayacağı proje sahibi kararıdır (B6f — açık).
+**Eskalasyon yetkisi ve saati (B6f — karar 2026-09-17):** rezervasyon yaşı siparişin ilk gönderim / rezervasyon başlangıç anından itibaren işler; personel onayı saati **sıfırlamaz ya da yeniden başlatmaz**. 72 saat rezervasyon kararını **yalnız Yönetici** rolü verebilir; Yönetici olmayan bir kullanıcı bu eskalasyon yetkisiyle rezervasyonu uzatamaz ya da sonlandıramaz. Yönetici rezervasyonu sürdürebilir / uzatabilir (aktör, zaman ve sebep Audit Log'a yazılır) ya da siparişi mevcut yaşam döngüsüne göre reddedebilir / iptal edebilir — ret / iptal B6k kuralına uyar (sipariş düzeyi idempotent iptal işlemi; varsa cari ters kaydı; rezervasyon aynı kontrollü işlemde serbest bırakılır). Hiçbir yönetici ya da personel aksiyonu siparişi açık bırakıp rezervasyonu bağımsız serbest bırakamaz.
 
 ## 31.5 Sipariş Miktar ve Varyant Değişikliği (sevkiyat öncesi)
 
@@ -1500,7 +1519,7 @@ Finans
 
 ## Yönetici
 
-Tüm alanlar.
+Tüm alanlar. Yalnız Yönetici'ye ait kararlar (2026-09-17): 72 saat rezervasyon eskalasyon kararı (B6f, §31.4), fiziksel stok eksikliğinde etkilenecek sipariş kararı (B6g, §31.1), açılış sayımının onayı (B6d, §81).
 
 ## Satış
 
@@ -1568,7 +1587,7 @@ Admin görebilir:
 - rezerve stok
 - kullanılabilir stok (= mevcut − rezerve; §31.1)
 - rezervasyon eskalasyon bayrakları (24 / 48 / 72 saat; §31.4)
-- mutabakat raporu ve açık (shortage) uyarıları (§31.8)
+- mutabakat raporu ve açık (shortage) uyarıları (§31.8); stok eksikliğinde etkilenen rezervasyonlar / siparişler ve Yönetici karar akışı (§31.1, B6g)
 
 Public kullanıcı kesin adet görmez.
 
@@ -1591,6 +1610,8 @@ Bu nedenler yalnız **fiziksel stok** hareketleridir (giriş, iade girişi, hasa
 
 İşlem Audit Log'a yazılır.
 
+**Açılış sayımı (B6d — karar 2026-09-17):** yeni yetkili envanter, eski B2B `products.stock` değerinden ya da tahmini bir sayıdan **tohumlanmaz**. Envanter go-live'ında ya da hemen öncesinde (geçiş runbook'una göre) SKU düzeyinde **fiziksel sayım** yapılır; bitmiş ticari stok birimleri (paket, şişe, kutu, adet) onaylı varyant modeline göre sayılır. Sayımı **Depo** personeli yapar, **Yönetici** onaylar; sayım zaman damgası, sayan kimliği, onaylayan Yönetici kimliği ve audit meta verisi kaydedilir. Onaylı miktarlar kontrollü açılış / sayım düzeltmesi süreciyle ilk yetkili fiziksel stok (on_hand) değerleri olur. Sayımın takvim tarihi go-live planlanana kadar operasyonel bir planlama kalemidir; iş kuralı bu nedenle açık sayılmaz.
+
 ---
 
 # 82. Fiyat Geçmişi
@@ -1606,6 +1627,13 @@ En az:
 
 takip edilebilir.
 
+**Satın alma maliyeti ve geçmiş kârlılık (B6i — karar 2026-09-17):**
+
+- V1'de satın alma maliyeti kaynağı **kontrollü bir Excel içe aktarımıdır**; içe aktarım tam ürün / varyant / SKU kimliğine eşlenir; belirsiz, eksik ya da çoklu eşleşme sessizce maliyet uygulamak yerine **fail-closed** olur / inceleme gerektirir; maliyet kaynağı ve kaynak referansı kaydedilir. (Dosya adı / şeması bu belgede tanımlanmaz.)
+- Sonraki aşamada kaynak, özel **salt-okunur** bir veritabanı kullanıcısıyla Logo SQL olur: yalnız SELECT; platform Logo verisine INSERT, UPDATE ya da DELETE yapmaz; sağlayıcı / ağ / güvenlik ayrıntıları altyapı işidir.
+- Güncel satın alma maliyeti, kaynağı ve son güncelleme meta verisiyle tutulur. Sipariş anında uygulanan satın alma maliyeti ve satış fiyatı sipariş satırına snapshot'lanır; sonraki maliyet değişiklikleri geçmiş sipariş kârlılığını yeniden yazmaz.
+- Donuk pastalarda satın alma maliyeti ve satış fiyatı SKU / kutu bazlıdır; kategori geneli tek maliyet uygulanmaz.
+
 ---
 
 # 83. Sipariş Yönetimi
@@ -1618,7 +1646,7 @@ Admin:
 - hazırlama durumunu değiştirir
 - takip numarası girer
 - iptal/iade akışını yönetir
-- rezervasyon eskalasyonunda (72 saat) onaylar / iptal edip serbest bırakır / uzatır (§31.4)
+- rezervasyon eskalasyonunda (72 saat) onaylar / iptal edip serbest bırakır / uzatır (§31.4) — bu karar **yalnız Yönetici** rolündedir (B6f — karar 2026-09-17)
 - sevkiyat öncesi miktar / varyant değişikliğini §31.5 kurallarıyla yapar
 
 ---
@@ -1983,9 +2011,12 @@ Public header üzerinden B2B uygulamasına geçiş yapılır.
 Hedef URL yapısı:
 
 ```text
-www.larantecoffee.com
-b2b.larantecoffee.com
+www.larantecoffee.com     — kurumsal site + public B2C deneyimi
+admin.larantecoffee.com   — yönetim uygulaması (§97)
+b2b.larantecoffee.com     — B2B uygulaması
 ```
+
+Mimari yön kabul edildi (B3 — 2026-09-17); DNS / hosting uygulama ayrıntıları ve sağlayıcı seçimleri açıktır (Phase 0 karar listesi B3, B7).
 
 Public web B2B panelini iframe ile gömmez.
 
@@ -2048,7 +2079,7 @@ Aşağıdaki sistemler adapter/port arkasında olmalıdır:
 
 - şehir bazlı spam SEO sayfaları
 - referans müşteri logo vitrini
-- donuk ürün satışı
+- donuk ürünlerin **public / B2C** satışı (donuk pastalar, Frozen Lemonade, Frozen Orange Juice) — B2B kanalında satılmaya devam eder; public "İşletmelere Özel" gösterimi / lead CTA'sı bu maddeye dahil değildir (B5, §12)
 - otomatik e-fatura/e-arşiv kesimi
 - zorunlu üyelik
 - web mağazasında B2B fiyatı
@@ -2085,6 +2116,8 @@ Launch öncesi en az:
 - [ ] ürün kategorileri çalışıyor
 - [ ] kahve varyant seçimleri çalışıyor
 - [ ] stokta yok davranışı doğru
+- [ ] donuk grup public'te "İşletmelere Özel" olarak görünüyor; Sepete Ekle / checkout yok, iletişim / teklif CTA'sı var; checkout donuk ürünü sunucuda reddediyor (B5)
+- [ ] 72 saat rezervasyon kararı ve stok eksikliği kararı yalnız Yönetici rolüyle alınabiliyor (B6f / B6g)
 - [ ] B2B siparişi gönderim anında rezervasyon oluşturuyor; bekleyen / başarısız rezervasyon onaylı sipariş gibi görünmüyor
 - [ ] 24 / 48 / 72 saat rezervasyon eskalasyonu çalışıyor; 72 saatte otomatik serbest bırakma yok
 - [ ] stok mutabakat raporu admin'de görünüyor
@@ -2122,6 +2155,8 @@ Launch öncesi en az:
 - [ ] unit/integration testler geçiyor
 - [ ] E2E kritik akışlar geçiyor
 - [ ] ödeme webhook idempotency test edilmiş
+- [ ] sipariş satırında KDV oranı, satış fiyatı ve satın alma maliyeti snapshot'ı; sonraki oran / maliyet değişikliği geçmiş siparişi değiştirmiyor (B4d / B6i)
+- [ ] maliyet / KDV içe aktarımı belirsiz ya da eksik eşlemede fail-closed (B6i / B4d)
 - [ ] oversell senaryosu test edilmiş
 - [ ] havale timeout test edilmiş
 - [ ] stok tek kaynak kuralı doğrulanmış
