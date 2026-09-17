@@ -2,6 +2,7 @@
 
 **Dosya:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Sürüm:** 1.0  
+**Revizyon:** 1.1 — 2026-09-16 (stok ve B2B sipariş-rezervasyon kuralları: §31.1–31.8, §41–42, §51, §80–83, §117–118, R13–R18; teknik sözleşme `docs/adr/ADR-016`; ikinci tur 2026-09-16: B6k kararı, kiracı izolasyonu, tekrar sipariş, DB tamsayı guard'ları)  
 **Tarih:** 2026-09-15  
 **Durum:** Onaylanmış ana gereksinimler  
 **Kapsam:** Larante Coffee Roastery kurumsal web sitesi, B2C e-ticaret, Larante Akademi, içerik, lead yönetimi ve web yönetim paneli.  
@@ -146,6 +147,7 @@ B2B girişi header içinde belirgin olacaktır; ana sayfada ayrı büyük B2B re
 - B2B müşterilerine sabit B2B liste fiyatı uygulanır.
 - Müşterilerin ayrı ayrı iskonto oranları olabilir.
 - B2B indirimi public web mağazasına otomatik taşınmaz.
+- B2B siparişi gönderildiği anda paylaşımlı stoktan rezervasyon yapar (§31.4); B2B sepeti rezervasyon oluşturmaz.
 
 ```text
 Ürün
@@ -295,7 +297,7 @@ Toz Grubu
 Çay Grubu
 ```
 
-**Donuk ürün grubu public web satış kapsamında değildir.**
+**Donuk ürün grubu public web satış kapsamında değildir.** Donuk pasta stok / kutu kuralları (§31.3) paylaşımlı envanter ve B2B siparişi için yine bağlayıcıdır.
 
 Kategori yapısı admin panelinden genişletilebilir olmalıdır.
 
@@ -641,6 +643,8 @@ gösterilir.
 
 Public sitede kesin stok adedi gösterilmez.
 
+"Stok varsa" = **kullanılabilir stok** (fiziksel − rezerve) > 0; bkz. §31.1.
+
 ---
 
 # 31. Tek Stok Kaynağı Kuralı
@@ -655,7 +659,111 @@ Tek Yetkili Stok
 
 **İki ayrı stok master kaynağı oluşturulması yasaktır.**
 
-Teknik sahiplik kararı mevcut B2B repository incelemesinden sonra mimari dokümana göre uygulanacaktır.
+Teknik sahiplik kararı mevcut B2B repository incelemesinden sonra mimari dokümana göre uygulanacaktır. Karar: `docs/adr/ADR-004` (platform owner, B2B tüketici) ve `docs/adr/ADR-016` (miktar modeli ve rezervasyon sözleşmesi).
+
+## 31.1 Stok Miktar Modeli
+
+Her stok kalemi (satılabilir varyant) için üç değer izlenir:
+
+```text
+Fiziksel stok (on_hand)      = depoda fiilen bulunan miktar
+Rezerve stok (reserved)      = gönderilmiş ama henüz sevk edilmemiş siparişlere ayrılmış miktar
+Kullanılabilir stok          = fiziksel stok − rezerve stok
+```
+
+Örnek: fiziksel 100, rezerve 10 → kullanılabilir 90.
+
+Kurallar:
+
+- Rezerve stok depodan çıkmamıştır; yalnız başka siparişe verilemez.
+- **Sevkiyat** hem fiziksel stoğu hem de ilgili rezervasyonu düşürür.
+- **İptal ya da ret (sipariş düzeyinde, tek işlem) ve miktar azaltma** rezervasyonu serbest bırakır; fiziksel stoğa dokunmaz. Açık bir siparişin rezervasyonu siparişten **bağımsız** serbest bırakılmaz (§31.4, R18).
+- Fiziksel stok hareketleri (giriş, sevkiyat, iade girişi, hasar/fire çıkışı, sayım/manuel düzeltme) yalnız fiziksel stoğu; rezervasyon işlemleri (rezerve et, serbest bırak, sevkiyatla kapat) yalnız rezerve stoğu değiştirir. İki grup birbirine karıştırılmaz.
+- "Stok varsa" (§30) her zaman **kullanılabilir stok > 0** demektir.
+
+Teknik sözleşme: ARCH V2.1 §16–17, `docs/adr/ADR-016`.
+
+## 31.2 Tamsayı ve Stok Birimi Kuralı
+
+- Sipariş, stok, rezervasyon, sevkiyat, iade, hasar ve stok düzeltmesi dahil **hiçbir yerde kesirli miktar yoktur**; tüm operasyonel miktarlar tam sayıdır.
+- Her satılabilir varyantın tanımlı bir **ticari stok birimi** vardır (paket, şişe, kutu, koli, adet …). Stok bu birimle sayılır, sipariş bu birimle verilir.
+- Belirsiz ya da kesirli kutu-birim dönüşümü kullanılmaz. B2B'de koli ile sipariş yalnız tam sayı katı olarak mümkündür (koli adedi × koli içi adet, ikisi de tam sayı) ve koli içi adet sipariş satırına o anki değeriyle kaydedilir. Ticari birimi zaten koli olan üründe dönüşüm yoktur. Her sipariş satırı, müşterinin girdiği miktar ve birimin yanında **stok birimi cinsinden miktarı** da saklar; stok, rezervasyon ve mutabakat yalnız bu miktarı kullanır.
+- Hangi varyantların yalnız koli ile satıldığı proje sahibi tarafından belirlenir (Phase 0 karar listesi B6e — açık).
+
+## 31.3 Donuk Pasta Kutu Kuralı
+
+Donuk pasta grubu public web'de satılmaz (§12, §115); ancak paylaşımlı envanterde ve B2B siparişinde şu kurallar bağlayıcıdır:
+
+- Stok ve sipariş birimi **kutudur**.
+- Yarım kutu, kısmi kutu ya da dilim düzeyinde stok hareketi yoktur.
+- Karışık / çeşitli kutu yoktur; her kutu tek ürün ve tek varyant içerir.
+- Farklı kutu içeriği ya da dilim sayısı **ayrı varyanttır** (ayrı SKU).
+- Her varyantın kendi kutu içeriği, satın alma maliyeti, satış fiyatı, dilim başına bilgi amaçlı fiyatı ve **bağımsız stoğu** vardır.
+- Kutu içeriği tanımlayıcı bilgidir; envanter daima **tam kutu** olarak sayılır.
+
+## 31.4 B2B Sipariş Rezervasyonu
+
+**Rezervasyon anı**
+
+- Sepet (web ya da B2B) hiçbir zaman stok rezerve etmez.
+- Rezervasyon, müşteri siparişi **gönderdiğinde** ve kalıcı sipariş kaydı oluştuğunda başlar.
+- Rezervasyon personel onayını **beklemez**; personel onayı stoğu yeniden rezerve etmez.
+
+**Güvenli sipariş akışı (müşteri ve personelin gördüğü)**
+
+```text
+Sipariş gönderildi → "İşleniyor" (rezervasyon bekleniyor)
+    ├── stok ayrıldı        → "Sipariş alındı" (onay bekliyor; stok rezerve)
+    └── stok yetersiz/hata  → "Stok yetersiz" (sipariş kesinleşmedi; yeni sipariş gerekir)
+```
+
+- "İşleniyor" durumundaki sipariş onaylanmış sipariş gibi gösterilmez ve cari borç oluşturmaz.
+- Aynı siparişin yanlışlıkla iki kez gönderilmesi ikinci bir sipariş ya da ikinci bir rezervasyon üretmez.
+- Teknik kesinti sonrası sistem aynı siparişi tekrar rezerve etmez; belirsiz kalan sipariş mutabakatla (§31.8) kapatılır.
+
+**Rezervasyon ömrü ve eskalasyon**
+
+- Gerçek, gönderilmiş bir B2B siparişinin rezervasyonu **otomatik olarak sona ermez**.
+- 24 saat: uyarı. 48 saat: yükseltilmiş uyarı. 72 saat: **yönetim kararı zorunlu**.
+- 72 saatte sistem stoğu **sessizce serbest bırakmaz**. Yönetim şu üç aksiyondan birini kaydeder: **onayla / sürdür**, **ret / iptal + serbest bırak**, **rezervasyonu uzat**.
+- Serbest bırakma her zaman **kim, ne zaman, neden** bilgisiyle kaydedilir (Audit Log). **Açık bir B2B siparişinin rezervasyonu hiçbir zaman siparişten bağımsız serbest bırakılmaz** (B6k — karar 2026-09-16): rezervasyon serbest bırakılacaksa sipariş **reddedilir ya da iptal edilir**; sipariş iptali / reddi, varsa cari ters kaydı ve rezervasyonun serbest bırakılması **tek, sipariş düzeyinde, idempotent bir iptal işlemidir** (tekrarı aynı sonucu verir, cari bakiye bir kez hareket eder). Siparişi açık bırakıp yalnız rezervasyonunu düşüren ya da azaltan **hiçbir admin aksiyonu sunulmaz** (miktar azaltma sipariş satırını değiştiren ayrı bir işlemdir, bağımsız serbest bırakma değildir). Deterministik mutabakat yalnız **karşılığında gerçek sipariş bulunmayan teknik sahipsiz rezervasyonu** mevcut mutabakat sözleşmesine göre serbest bırakabilir (§31.8).
+- Teknik olarak sahipsiz kalan rezervasyonlar (karşılığında gerçek sipariş satırı olmayan) mutabakat süreciyle onarılabilir.
+
+Eskalasyon aktörünün rolü ve onayın 72 saat saatini sıfırlayıp sıfırlamayacağı proje sahibi kararıdır (B6f — açık).
+
+## 31.5 Sipariş Miktar ve Varyant Değişikliği (sevkiyat öncesi)
+
+- **Artış:** yalnız ek fark rezerve edilir. Ek stok yoksa **istenen değişikliğin tamamı** başarısız olur; mevcut sipariş değişmez.
+- **Azalış:** fark **hemen** serbest bırakılır.
+- **Varyant değişikliği** atomiktir: yeni varyant rezerve edilir ve eski varyant aynı işlemde serbest bırakılır; yeni stok yoksa hiçbir şey değişmez.
+- Değişiklik B2B cari hesabına yalnız fark tutarıyla ve bir kez yansır; artışta ek kredi kontrolü yapılır; değişiklik başarısızsa cari hesap da değişmez.
+- **Sevkiyat sonrası** miktar ya da varyant doğrudan düzenlenmez. Yollar: iade, ek sipariş ya da kontrollü stok düzeltmesi (sebep + Audit Log).
+- Kurallar B2B siparişleri ve web siparişlerinin admin tarafından düzenlenmesi için aynıdır.
+
+## 31.6 İptal Edilen Sipariş
+
+- İptal edilen sipariş **değişmezdir ve asla yeniden açılmaz**.
+- Talebin tekrarı **yeni sipariş** oluşturur: yeni sipariş numarası, yeni stok kontrolü, yeni rezervasyon.
+- Yeni sipariş izlenebilirlik için iptal edilen kaynak siparişe referans verebilir.
+- **Tekrar sipariş ("yeniden sipariş ver"):** iptal edilmiş ya da tamamlanmış siparişin satırları kalıcı **varyant kimliğiyle** (ürün adıyla değil) güncel katalogda yeniden çözülür; çözülemeyen ya da değişmiş satır sessizce başka ürünle değiştirilmez ve düşürülmez, kullanıcıya "onay gerekli" olarak gösterilir; koli / adet dönüşümü güncel katalog verisiyle yeniden hesaplanır. Gönderim sıradan yeni sipariştir: **yeni gönderim kimliği, yeni sipariş kimliği ve numarası, yeni stok doğrulaması, yeni rezervasyon, yeni işlem kimlikleri**; yeni sipariş kaynak siparişe yalnız izlenebilirlik için referans verir; kaynak siparişten **hiçbir stok, rezervasyon ya da cari durum devralınmaz**; iptal edilmiş sipariş değişmez kalır — "yeniden aç" yolu yoktur.
+- Değişmezlik belge ve fatura eklerini de kapsar; iptal edilmiş siparişe belge eklenmesi gerekiyorsa bu açık bir istisna olarak proje sahibi kararıyla belgelenir (B6j — açık).
+
+## 31.7 Tam Varyant Bağlama
+
+- Her sipariş satırı (B2B ve web) **tam olarak bir** envanter varyantına / SKU'ya bağlanır; yalnız genel ürüne bağlı satır olamaz.
+- Varyant kimliği stoku belirleyen tüm nitelikleri içerir: ürün, kavrum / kullanım tipi (espresso / filtre), gramaj, ambalaj, kutu konfigürasyonu ve gerekirse diğerleri.
+- Dış / B2B ürün kodları tam bir varyanta çözülür; çözülemeyen kodla sipariş kabul edilmez.
+- Personel, sipariş oluştuktan sonra belirsiz bir satıra sessizce varyant atayamaz.
+
+Mevcut B2B ürün satırlarının tam varyanta eşlenmesi (ör. kavrumsuz kayıtlar) proje sahibi kararıdır (B6a — açık).
+
+## 31.8 Stok Mutabakatı
+
+- Zamanlanmış bir mutabakat süreci B2B sipariş satırlarını, aktif rezervasyonları, rezervasyon miktarlarını ve stok bakiyelerini karşılaştırır.
+- Tespit eder: sahipsiz rezervasyon, eksik rezervasyon, çift işlem, miktar uyuşmazlığı, sonuçlanmış siparişte kalan rezervasyon.
+- Otomatik onarım yalnız kesin (deterministik) durumlarda yapılır; belirsiz durumlar yönetim uyarısı ve Audit Log kaydı olur. Sevk edilmiş ya da teslim edilmiş bir siparişte kalan rezervasyon hiçbir zaman otomatik serbest bırakılmaz (yalnız uyarı).
+- Mutabakat raporu admin stok ekranında görünür (§80).
+- **Kiracı izolasyonu:** B2B'nin mutabakat için sunduğu anlık görüntü ucu ve bu uçla tetiklenen kurtarma adımı uçtan uca **tek bir yetkili kiracıya** bağlıdır — kimlik doğrulama bağlamı, görüntü sorgusu, bekleyen işlem kurtarması, koşullu yerel sonuçlandırma, audit kayıtları ve dönen satırlar aynı kiracıya aittir. Başka kiracıya ait bir kimlik "bulunamadı" (`not_found`) sayılmaz — kapsam dışıdır (`out_of_scope`; varlığı sızdırılmaz) ve onarım tetiklemez; çapraz-kiracı okuma, kurtarma, sonuçlandırma ya da işlem-kimliği yeniden kullanımı fail-closed reddedilir (ADR-016 K11/2k). Aynı veritabanını paylaşan test / ön-izleme ortamı üretim işlemlerini kurtaramaz ya da sonuçlandıramaz ve üretim siparişlerini, cari bakiyelerini ya da rezervasyon kayıtlarını **hiçbir yoldan** değiştiremez (sipariş gönderimi ve yönetici durum / iptal / sevkiyat aksiyonları dahil, yan etkiden önce reddedilir; salt-okunur): entegrasyon yalnız üretim ortamında etkindir (ADR-016 K11/2k-vii).
 
 ---
 
@@ -668,7 +776,7 @@ Sepet:
 
 için çalışmalıdır.
 
-Sepete ürün eklemek uzun süreli stok rezervasyonu oluşturmaz.
+Sepete ürün eklemek (web ya da B2B) hiçbir stok rezervasyonu oluşturmaz; rezervasyon yalnız sipariş gönderiminde başlar (§31.4, §41).
 
 Fiyat ve kullanılabilirlik checkout sırasında server tarafında yeniden doğrulanır.
 
@@ -832,8 +940,8 @@ Kullanıcı sepete eklediğinde stok düşmez.
 Ödeme başarılı olduğunda:
 
 - sipariş kesinleşir
-- stok kesin düşer
-- rezervasyon kalıcı satış hareketine dönüşür
+- rezervasyon kalıcılaşır (süresi kalkar); kullanılabilir stok kesin olarak ayrılmış kalır
+- fiziksel stok **sevkiyatta** düşer ve rezervasyon o anda kapanır (§31.1)
 
 Ödeme başarısız olduğunda rezervasyon serbest bırakılır.
 
@@ -863,6 +971,8 @@ Hazırlanıyor
 - ayrılmış stok serbest bırakılır
 
 Havale süresi yönetilebilir ayar olmalıdır; ilk kural 24 saattir.
+
+Ödeme alındığında rezervasyon kalıcılaşır; fiziksel stok sevkiyatta düşer (§41). Otomatik süre dolumu yalnız ödenmemiş web rezervasyonları içindir; B2B rezervasyonları §31.4'e tabidir.
 
 ---
 
@@ -1000,6 +1110,8 @@ Kargoya verildikten sonra:
 - `İade Talebi`
 
 akışı kullanılır.
+
+Kargoya verilmeden iptal rezervasyonu serbest bırakır; kargoya verildikten sonra iade, iade girişi stok hareketi üretir. Sevkiyat sonrası miktar ya da varyant doğrudan düzenlenmez (§31.5).
 
 Tam/kısmi iade teknik olarak ödeme sağlayıcısı desteklediği ölçüde mimaride mümkün olmalıdır.
 
@@ -1454,7 +1566,9 @@ Admin görebilir:
 
 - mevcut stok
 - rezerve stok
-- kullanılabilir stok
+- kullanılabilir stok (= mevcut − rezerve; §31.1)
+- rezervasyon eskalasyon bayrakları (24 / 48 / 72 saat; §31.4)
+- mutabakat raporu ve açık (shortage) uyarıları (§31.8)
 
 Public kullanıcı kesin adet görmez.
 
@@ -1472,6 +1586,8 @@ Manuel stok değişikliğinde sebep zorunludur.
 - Hasar
 - İade
 - Manuel Düzeltme
+
+Bu nedenler yalnız **fiziksel stok** hareketleridir (giriş, iade girişi, hasar / fire çıkışı, sayım / manuel düzeltme); miktarlar pozitif tam sayıdır ve yön açıktır. Rezerve etme ve serbest bırakma manuel stok hareketi değildir; rezervasyon işlemidir; serbest bırakma yalnız sipariş düzeyi iptal / ret işlemiyle olur ve sebep zorunludur (§31.4, R18).
 
 İşlem Audit Log'a yazılır.
 
@@ -1502,6 +1618,8 @@ Admin:
 - hazırlama durumunu değiştirir
 - takip numarası girer
 - iptal/iade akışını yönetir
+- rezervasyon eskalasyonunda (72 saat) onaylar / iptal edip serbest bırakır / uzatır (§31.4)
+- sevkiyat öncesi miktar / varyant değişikliğini §31.5 kurallarıyla yapar
 
 ---
 
@@ -1967,6 +2085,9 @@ Launch öncesi en az:
 - [ ] ürün kategorileri çalışıyor
 - [ ] kahve varyant seçimleri çalışıyor
 - [ ] stokta yok davranışı doğru
+- [ ] B2B siparişi gönderim anında rezervasyon oluşturuyor; bekleyen / başarısız rezervasyon onaylı sipariş gibi görünmüyor
+- [ ] 24 / 48 / 72 saat rezervasyon eskalasyonu çalışıyor; 72 saatte otomatik serbest bırakma yok
+- [ ] stok mutabakat raporu admin'de görünüyor
 - [ ] guest checkout çalışıyor
 - [ ] üye checkout çalışıyor
 - [ ] kart/3D sağlayıcı entegrasyonu test edilmiş
@@ -2004,6 +2125,13 @@ Launch öncesi en az:
 - [ ] oversell senaryosu test edilmiş
 - [ ] havale timeout test edilmiş
 - [ ] stok tek kaynak kuralı doğrulanmış
+- [ ] miktar tamsayı kısıtları DB'de aktif — mevcut ve yeni miktar kolonlarında veritabanı düzeyi guard'lar (B2B: `0022` tetikleyicileri); 0.5 / 1.25 / 2.5 gibi kesirli değerlerin DB düzeyinde reddi test edilmiş; uygulama doğrulaması tek başına yeterli sayılmaz
+- [ ] B2B mutabakat ucu ve kurtarma adımı kiracı izolasyonu test edilmiş (çapraz-kiracı okuma / kurtarma / sonuçlandırma yok; kapsam dışı kimlik varlık sızdırmaz)
+- [ ] B2B tekrar sipariş yolu test edilmiş (kalıcı varyant kimliğiyle çözüm; yeni kimlikler; iptal edilmiş sipariş yeniden açılmıyor)
+- [ ] B2B sipariş iptali / reddi tek idempotent işlem (iptal + varsa cari ters kaydı + serbest bırakma) test edilmiş; açık siparişte bağımsız serbest bırakma ucu yok
+- [ ] rezervasyon işlemleri idempotent (aynı işlem kimliği tek etki) test edilmiş
+- [ ] B2B rezervasyon zaman aşımı → sorgu → aynı kimlikle yeniden deneme test edilmiş; çift rezervasyon yok
+- [ ] mutabakat job'u sahipsiz / eksik / çift / uyumsuz rezervasyonu tespit ediyor
 - [ ] admin yetkisiz erişim test edilmiş
 - [ ] rate-limit kritik endpointlerde aktif
 - [ ] backup oluşturma test edilmiş
@@ -2056,6 +2184,24 @@ Bildirim servisindeki hata sipariş verisini kaybettirmemelidir.
 
 ## R12
 Mevcut B2B kodu doğrulanmadan stok/product ownership varsayımı yapılmaz.
+
+## R13
+Sipariş, stok, rezervasyon, sevkiyat, iade, hasar ve düzeltmede kesirli miktar yoktur; her varyantın tanımlı ticari stok birimi vardır.
+
+## R14
+Fiziksel stok hareketleri yalnız fiziksel stoğu, rezervasyon işlemleri yalnız rezerve stoğu değiştirir; ikisi karıştırılmaz.
+
+## R15
+B2B rezervasyonu sipariş gönderiminde başlar, personel onayını beklemez, otomatik sona ermez ve 72 saatte sessizce serbest bırakılmaz.
+
+## R16
+Her sipariş satırı tam olarak bir envanter varyantına bağlanır; personel sonradan sessizce varyant atayamaz.
+
+## R17
+İptal edilen sipariş değişmezdir ve yeniden açılmaz; tekrar yeni sipariştir.
+
+## R18
+Açık bir B2B siparişinin rezervasyonu siparişten bağımsız serbest bırakılmaz; serbest bırakma yalnız siparişin iptali / reddiyle tek, idempotent işlemde olur; mutabakat yalnız gerçek sahipsiz rezervasyonu onarır.
 
 ---
 

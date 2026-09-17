@@ -1,11 +1,32 @@
 # LARANTE WEB PLATFORMU — ALTYAPI VE MİMARİ KARAR DOKÜMANI V2
 
 **Dosya:** `LARANTE_WEB_ALTYAPI_MIMARISI_V2.md`  
-**Sürüm:** 2.0  
-**Tarih:** 2026-09-15  
+**Sürüm:** 2.1  
+**Tarih:** 2026-09-15 (V2.0) · 2026-09-16 (V2.1 revizyonu)  
 **Durum:** Gereksinim sonrası revize ana mimari  
 **Kaynak gereksinim:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Önceki sürüm:** `LARANTE_WEB_ALTYAPI_MIMARISI_V1.md`
+
+---
+
+# 0. V2.1 Revizyon Notu — 2026-09-16
+
+Bu revizyon yalnız **stok miktar modeli ve B2B sipariş-rezervasyon sözleşmesi** bulgularını (Codex doküman denetimi 2026-09-16: F01–F06, F11, H2, H6) ve proje sahibinin aynı gün onayladığı iş kurallarını işler. Karar kaydı: `docs/adr/ADR-016`; gereksinim tarafı: REQ v1.1 §31.1–31.8.
+
+| Bölüm | Değişiklik |
+|---|---|
+| §13 | Fiziksel stok modeli kesinleşti: satılabilir varyant = stok kalemi, tamsayı, `stock_unit`; donuk pasta kutu |
+| §16–17 | `on_hand` / `reserved` / `available` tanımları; fiziksel hareket ↔ rezervasyon olayı ayrımı; RESERVATION/RELEASE hareket listesinden çıktı; invariant'lar |
+| §21–22 | `variant_id` zorunlu, varyant snapshot'ı; SHIPPED = COMMIT + SHIP; CANCELLED terminal; B2B rezervasyon durumları |
+| §25–26 | Ödeme başarısı rezervasyonu kalıcılaştırır; fiziksel düşüş sevkiyatta; süre dolumu yalnız ödenmemiş rezervasyon |
+| §30 | Worker'a eskalasyon ve mutabakat işleri |
+| §62, §64 | Alan düzeyi kısıtlar; kimlik sınıfları ve çitleme |
+| §87 | Port yönü düzeltildi (portlar platformda, B2B istemci); uç listesi; imzalı salt-okunur mutabakat çekmesi |
+| §100 | ADR-006 → ADR-016'da birleşti; ADR-016 = stok/rezervasyon sözleşmesi; deployment → ADR-017 |
+| §101 | Master plan §18 yetkili faz haritası; eşleme tablosu; Faz 0 çıkış koşulu |
+| §106 | DoD'ye ADR-016 |
+
+**Bu revizyonda dokunulmayan bilinen düzeltmeler (B10):** §5.4 "Node/Express" ve §5.6 "Prisma" varsayımları gerçek B2B (Bun + TanStack Start + Workers + D1, ORM yok) ile çelişir — ADR-001 / ADR-015 geçerlidir; metin ayrı bir V2.2 notuyla düzeltilecektir. Ertelenen denetim bulguları: master plan §23, `docs/decisions/PHASE0_KARAR_LISTESI.md` §E.
 
 ---
 
@@ -462,13 +483,13 @@ roast × weight × grind
 
 her kombinasyon için ayrı fiziksel stok zorunlu değildir.
 
-Fiziksel stok modeli üretim gerçekliğine göre:
+**V2.1 — kesinleşti (ADR-016 K1, K6, K7):**
 
-- sellable SKU
-- bulk inventory
-- packaging conversion
-
-arasından B2B/stok audit sonrası kesinleştirilir.
+- Fiziksel stok kalemi = **satılabilir varyant** (`SellableVariant` ↔ `InventoryItem` 1:1). Varyant kimliği stoku belirleyen tüm boyutları taşır: kavrum / kullanım tipi, gramaj, ambalaj, kutu konfigürasyonu (`variant_key`; `UNIQUE (product_id, variant_key)`).
+- Her varyantın zorunlu bir **ticari stok birimi** (`stock_unit`: paket / şişe / kutu / koli / adet …) vardır; tüm miktarlar bu birimin **tam sayı** katıdır. Kesirli miktar hiçbir yerde yoktur.
+- Koli (packaging conversion) yalnız **tamsayı katı** olarak ve sipariş satırına snapshot'lanmış `box_count` ile vardır; ticari birimi koli olan varyantta dönüşüm yoktur. Belirsiz / kesirli kutu-birim dönüşümü yasaktır.
+- Donuk pasta: `stock_unit = kutu`; yarım / kısmi / dilim hareketi yok; karışık kutu yok; farklı içerik veya dilim sayısı ayrı varyant; kutu içeriği tanımlayıcıdır (REQ §31.3).
+- Bulk (dökme kg) envanteri ve kg → paket dönüşümü **V1 dışıdır**.
 
 ---
 
@@ -512,25 +533,27 @@ B2B backend sorumluluğunda kalır.
 Hedef model:
 
 ```text
-InventoryItem
-InventoryBalance
-InventoryMovement
-InventoryReservation
+InventoryItem            (satılabilir varyant ↔ stok kalemi, 1:1)
+InventoryBalance         (on_hand, reserved)
+InventoryMovement        (fiziksel hareket — yalnız on_hand)
+InventoryReservation     (sipariş satırı + nesil başına; ACTIVE / RELEASED / COMMITTED)
+InventoryReservationEvent(RESERVE / RELEASE / COMMIT — yalnız reserved)
 ```
 
-Türetilebilir değerler:
+**V2.1 tanımlar (REQ §31.1, ADR-016 K1–K2):**
 
-```text
-on_hand
-reserved
-available
-```
+| Değer | Alan | Tanım |
+|---|---|---|
+| Fiziksel stok | `on_hand` | depoda fiilen bulunan miktar |
+| Rezerve stok | `reserved` | gönderilmiş, henüz sevk edilmemiş siparişlere ayrılmış miktar |
+| Kullanılabilir | `available` | `on_hand − reserved`; **türetilir, gerçek olarak saklanmaz** |
 
-`available` mümkün olduğunca türetilir:
+Örnek: `on_hand = 100`, `reserved = 10` → `available = 90`.
 
-```text
-available = on_hand - reserved
-```
+- Bakiyeler **negatif olmayan tamsayıdır** (`INTEGER CHECK (>= 0)`); kesirli miktar hiçbir tabloda yoktur.
+- Her varyantın ticari stok birimi (`stock_unit`) vardır; tüm miktarlar bu birimin tam katıdır (§13).
+- Rezervasyon tek atomik ifadeyle açılır: `UPDATE inventory_balances SET reserved = reserved + q WHERE item_id = i AND on_hand − reserved >= q` (0 satır → yetersiz stok).
+- `reserved <= on_hand` **sert kısıt değildir**: fiziksel kayıp (hasar / sayım düşüşü) her zaman kaydedilir; `available < 0` olan kalem **açık (shortage)** durumundadır — yeni rezervasyon açılamaz, mutabakat yönetim uyarısı üretir (ADR-016 K2/8).
 
 ---
 
@@ -538,21 +561,40 @@ available = on_hand - reserved
 
 Sadece `quantity = 42` saklayan kör model yeterli değildir.
 
-Stok hareketleri:
+**V2.1:** ledger iki ayrı kayıt türünden oluşur; ikisi **birbirine karıştırılmaz** (ADR-016 K2).
+
+## 17.1 Fiziksel hareketler — yalnız `on_hand`
 
 ```text
-PRODUCTION
-SALE
-RETURN
-DAMAGE
-WASTE
-COUNT_ADJUSTMENT
-MANUAL_ADJUSTMENT
-RESERVATION
-RELEASE
+RECEIVE       (+)  üretim / satın alma girişi         reason PRODUCTION | PURCHASE
+SHIP          (−)  sevkiyat                            reason SALE, ref sipariş; COMMIT ile aynı transaction
+RETURN_IN     (+)  iade girişi                         reason RETURN
+DAMAGE_OUT    (−)  hasar / fire                        reason DAMAGE | WASTE
+ADJUST_UP     (+)  sayım / manuel düzeltme (artış)     reason COUNT_ADJUSTMENT | MANUAL_ADJUSTMENT
+ADJUST_DOWN   (−)  sayım / manuel düzeltme (azalış)    reason COUNT_ADJUSTMENT | MANUAL_ADJUSTMENT
 ```
 
-gibi nedenlerle kaydedilebilir.
+Her hareket: `qty INTEGER CHECK (qty > 0)`, açık `direction IN|OUT`, `reason NOT NULL`, `ref_type/ref_id`, actor, audit. V2.0'daki `PRODUCTION / SALE / RETURN / DAMAGE / WASTE / COUNT_ADJUSTMENT / MANUAL_ADJUSTMENT` sebepleri bu tiplere eşlenir; **`RESERVATION` ve `RELEASE` fiziksel hareket değildir** ve bu listeden çıkarılmıştır.
+
+## 17.2 Rezervasyon olayları — yalnız `reserved`
+
+```text
+RESERVE   (+)  sipariş gönderimi, miktar artışı, varyant değişimi (yeni nesil)
+RELEASE   (−)  iptal, ret (sipariş düzeyi tek idempotent CANCEL op — B6k; sebep zorunlu), miktar azaltma (PATCH op'unun parçası), mutabakat onarımı (yalnız gerçek sahipsiz rezervasyon); açık siparişte bağımsız serbest bırakma yok
+COMMIT    (−)  sevkiyat — yalnız SHIP hareketiyle birlikte, aynı transaction'da
+```
+
+Her olay: `qty INTEGER CHECK (qty > 0)`, `action`, `operation_ref` (→ `operations.id`, iç anahtar; bir işlem birden çok olay üretebilir — çok satırlı rezervasyon, varyant takası), actor, reason; `UNIQUE (operation_ref, reservation_id, action)`. İşlem kaydı `operations(id PK, namespace, operation_id, request_hash, status succeeded|failed|abandoned; UNIQUE (namespace, operation_id))` tablosundadır — dış `operation_id` (= `Idempotency-Key`) yalnız ad alanı içinde tekildir; ad alanı `'b2b:' + external_tenant_id` (B2B principal'ları) / `'web'` (platform-içi web kanalı) (ADR-016 K2/4, RV01).
+
+## 17.3 Invariant'lar (mutabakat işi doğrular)
+
+```text
+on_hand   = Σ IN − Σ OUT                      (yalnız fiziksel hareketler)
+reserved  = Σ RESERVE − Σ RELEASE − Σ COMMIT  (= aktif rezervasyonların toplamı)
+available = on_hand − reserved
+```
+
+Sevkiyat (SHIP + COMMIT) her kanalda **sevkiyat anında** gerçekleşir; ödeme başarısı (web) ya da personel onayı (B2B) fiziksel stoğu değiştirmez (§25–26, ADR-016 K2/9, K3).
 
 Audit ile ilişkilendirilir.
 
@@ -619,10 +661,13 @@ variant_snapshot
 unit_price_snapshot
 tax_snapshot
 discount_snapshot
-quantity
+quantity               (INTEGER > 0, varyantın stok birimi cinsinden)
+source_order_id        (iptal sonrası tekrar siparişte kaynak referansı; opsiyonel)
 ```
 
 gibi immutable geçmiş bilgileri korur.
+
+**V2.1:** `variant_id` **zorunludur** — yalnız ürüne bağlı satır olamaz (ADR-016 K6); `variant_snapshot` stok-belirleyici nitelikleri (kavrum, gramaj, ambalaj, kutu konfigürasyonu) ve `stock_unit`'i dondurur. Teslimat adresi snapshot'ı ve kargo / vergi / toplam kalemleri F13 kapsamında açıktır.
 
 ---
 
@@ -651,6 +696,8 @@ DELIVERED → PREPARING
 ```
 
 normal UI aksiyonu değildir.
+
+**V2.1:** `SHIPPED` geçişi her kanalda rezervasyonu kapatır ve fiziksel stoğu düşürür (COMMIT + SHIP, §17.3). `CANCELLED` terminaldir; iptal edilen sipariş yeniden açılmaz, tekrar = yeni sipariş (REQ §31.6). B2B kendi durum sözlüğünü korur ve rezervasyon etrafında iki durum ekler: `rezervasyon_bekliyor → onay | rezervasyon_basarisiz`; `iptal` terminal (ADR-016 K4, K9).
 
 ---
 
@@ -699,14 +746,18 @@ Kartlı ödeme akışı:
 ```text
 Checkout validated
 ↓
-short reservation
+short reservation (TTL)
 ↓
 payment flow
-├── success → reservation commit / sale
+├── success → rezervasyon kalıcılaşır (expires_at temizlenir; miktar ve fiziksel stok değişmez)
 └── failure/timeout → release
+↓
+SHIPPED → COMMIT + SHIP (fiziksel düşüş sevkiyatta)
 ```
 
-Reservation TTL yönetilebilir.
+Reservation TTL yönetilebilir (TTL'in PSP 3DS oturum süresiyle ilişkisi H10 — açık, ADR-007).
+
+**V2.1:** ödeme başarısı fiziksel stoğu düşürmez; kullanılabilir stok zaten rezervasyonla ayrılmıştır (REQ §41, ADR-016 K2/9).
 
 ---
 
@@ -726,6 +777,8 @@ Worker:
 - ödenmemiş siparişi iptal eder
 - stok rezervasyonunu bırakır
 - kullanıcıya bildirim gönderebilir
+
+**V2.1:** süre dolumu yalnız `expires_at` dolu (ödenmemiş) rezervasyonlar içindir; ödeme alındığında rezervasyon kalıcılaşır ve sevkiyata kadar korunur. B2B rezervasyonlarında süre dolumu yoktur (ADR-016 K5).
 
 ---
 
@@ -798,6 +851,10 @@ Görevler:
 - analytics export
 - search indexing uygun olduğunda
 - scheduled housekeeping
+- rezervasyon eskalasyonu (24 / 48 / 72 saat bayrakları + bildirim; otomatik serbest bırakma yok — ADR-016 K5)
+- stok mutabakatı (B2B'den imzalı salt-okunur anlık görüntü çekme, invariant doğrulama, deterministik onarım; `INCOMPLETE` koşuda onarım yok — ADR-016 K11)
+
+**V2.1:** B2B tarafında zamanlayıcı yoktur; platformun mutabakat çekmesi B2B'nin bekleyen işlemlerini sonuçlandırma "tik"idir (ADR-016 K4-R).
 
 ---
 
@@ -1333,10 +1390,12 @@ Uygulama validasyonu tek başına yeterli değildir.
 
 - unique email uygun bağlamda
 - coupon code uniqueness
-- non-negative quantities
-- foreign keys
-- unique idempotency key
-- reservation validity
+- negatif olmayan **tamsayı** bakiyeler (`on_hand`, `reserved` ≥ 0) ve pozitif tamsayı hareket / olay miktarları (`qty` > 0); kesirli miktar yok — B2B tarafında mevcut `REAL` miktar kolonları (`order_items.qty`, `products.moq`, `products.box_count`) ve yeni miktar kolonları DB düzeyi guard tetikleyicileriyle zorlanır (ADR-016 K12/1a; uygulama doğrulaması tek başına yeterli değildir)
+- foreign keys (`order_lines.variant_id NOT NULL`)
+- unique idempotency / operation key (`operations(id PK, namespace, operation_id; UNIQUE (namespace, operation_id))`; olaylarda `UNIQUE (operation_ref, reservation_id, action)`; `variant_external_codes UNIQUE(system, code)`; `sellable_variants UNIQUE(product_id, variant_key)`)
+- reservation validity (sipariş satırı başına tek ACTIVE nesil)
+
+**V2.1:** `reserved <= on_hand` sert kısıt değildir (§16 shortage); ayrıntı ADR-016 K2.
 
 DB seviyesinde korunur.
 
@@ -1365,6 +1424,9 @@ Zorunlu alanlar:
 - order submit uygun olduğunda
 - refund request/provider callback
 - background notification handler
+- inventory reserve / release / adjust / cancel / commit (her biri kendi işlem kimliğiyle)
+
+**V2.1 — kimlik sınıfları (ADR-016 K10):** gönderim kimliği (`submission_id`, istemci üretir, kanonik istek parmak iziyle saklanır), sipariş kimliği, rezervasyon kimliği + nesli, işlem kimliği (`operation_id` = `Idempotency-Key`, çağrıdan **önce** kalıcı yazılır). `order_id + geçiş` evrensel anahtar olarak **kullanılmaz**. Aynı anahtar + aynı gövde → kayıtlı sonuç; aynı anahtar + farklı gövde → 422; belirsiz sonuç → `operations/{id}` sorgusu → `abandon` (mezar taşı) ile çitleme; geçen süre tek başına sonuç sayılmaz.
 
 ---
 
@@ -1741,16 +1803,28 @@ Gerçek ölçek ihtiyacı olmadan distributed system kurulmaz.
 
 # 87. B2B Integration Contract
 
-Audit sonrası public ihtiyaçlar için sözleşme:
+**V2.1 (2026-09-16):** Audit (ADR-004) B2B'nin Inventory owner olmadığını kanıtladı; bu nedenle portların yönü V2.0'daki varsayımın **tersidir**: portlar **platformda sunulur**, B2B **istemcidir**. Ayrıntılı sözleşme: `docs/adr/ADR-016`.
 
 ```text
-CatalogReadPort
-InventoryReadPort
-InventoryReservationPort
-InventoryCommitPort
+platform-api (owner)                          B2B (tüketici)
+  /internal/v1/inventory/availability   ◄───  katalog in_stock projeksiyonu
+  /internal/v1/inventory/reservations   ◄───  sipariş gönderimi (çok satırlı, atomik)
+  …/reservations/patch                  ◄───  miktar / varyant değişikliği (sipariş kapsamlı, atomik)
+  …/reservations/release                ◄───  iptal / ret (sipariş kapsamlı CANCEL op; sebep zorunlu; bağımsız serbest bırakma yok — B6k)
+  …/reservations/commit                 ◄───  sevkiyat (sipariş kapsamlı; COMMIT + SHIP)
+  …/operations/{op_id}                  ◄───  belirsiz sonuç sorgusu
+  …/operations/{op_id}/abandon          ◄───  çitleme (mezar taşı)
+  /api/b2b/internal/reservation-snapshot ───► platform worker mutabakat çekmesi (salt-okunur, imzalı)
 ```
 
-uygulanabilir.
+Kurallar:
+
+- Her çağrı `Idempotency-Key = operation_id` taşır; işlem kimliği çağrıdan **önce** çağıran tarafta kalıcı yazılır (ADR-016 K10). `order_id + geçiş` anahtar olarak kullanılmaz.
+- Rezervasyon oluşturma **ve** patch / release / commit sipariş kapsamlıdır: tüm `reservation_id` + beklenen nesil listesi tek `operation_id` altında, **hepsi-ya-da-hiçbiri**; kısmi rezervasyon / kısmi commit / kısmi release yoktur. B2B tarafında niyet kabulü atomiktir (durum + sürüm + bekleyen op yok + kredi taahhüdü tek ifadede); yerel geçişler (`onay → uretimde → kalite`, `sevkiyat → teslim`) platform çağrısı olmadan koşullu tek UPDATE ile yapılır (ADR-016 K4-P). Her satır **kanonik stok-birimi miktarı** `qty_stock_units` ile (ayrıca `order_qty`, `order_unit`, `conversion_factor` — koli modunda `box_count` snapshot'ı, aksi halde 1) gönderilir; platform yalnız `qty_stock_units`'i rezerve eder.
+- Zaman aşımı → `operations/{op_id}` sorgusu → aynı anahtarla sınırlı yeniden deneme → hâlâ belirsizse `abandon` ile mezar taşı; başarısızlık yalnız `abandoned` ya da yetkili `failed` sonucundan sonra sonuçlandırılır. Geçen süre tek başına sonuç sayılmaz.
+- Platform → B2B yönünde yalnız **bir** çağrı vardır: imzalı, salt-okunur mutabakat anlık görüntüsü (Ed25519, zaman damgası + nonce; B2B kaynağa gömülü açık anahtarla doğrular; Worker'da sır yok). Komut / yazma çağrısı yoktur. B2B bu isteği kendi bekleyen işlemlerini sonuçlandırmak için "tik" olarak kullanır (ADR-016 K4-R). **Kiracı kapsamı (ADR-016 K11/2k):** istek kiracısı hostname'den (`resolveRequestTenant`, fail-closed) çözülür; imza anahtarı yetkili kiracıya **ve** ortama bağlıdır; imzalı yükteki `tenant_id` / `environment` host kiracısıyla eşleşmezse 403 ve hiçbir okuma / kurtarma / sonuçlandırma / audit yan etkisi olmaz; görüntü sorgusu, bekleyen-op kurtarması, koşullu yerel sonuçlandırma, audit kayıtları ve dönen satırlar tek `tenant_id`'ye bağlıdır; başka kiracı niteleyicili kimlik → `out_of_scope` (`not_found` değildir; DB'ye bakılmadan, varlıktan bağımsız aynı yanıt; onarım yok). Platform tarafında her mutasyon ucu ve idempotency araması principal → `external_tenant_id` + sipariş / rezervasyon sahipliği kapısından geçer (yabancı sipariş niteleyicisi 422, yabancı / var olmayan rezervasyon 404 — ayırt edilemez); işlem ve rezervasyon kayıtları NULL içermeyen `namespace` (`'b2b:' + external_tenant_id` / `'web'`) taşır (ADR-016 K4/7, K10/3–4). **Ortam:** preview / prod aynı D1'i paylaştığı sürece entegrasyon yalnız `environment = production` dağıtımında etkindir; non-prod dağıtım `off` değil **`environment_disabled`** modundadır — sipariş / cari / rezervasyon mutasyonları (sipariş gönderimi, admin durum / iptal / sevkiyat, değişiklik, ek / fatura, tahsilat) yan etkiden önce 403 ile reddedilir, anlık görüntü ucu 403, kurtarma çalışmaz; okuma uçları çalışır; kapı dağıtım ortamına bağlıdır (hostname ortamı ayırt etmez) ve ortam bilinmiyorsa non-prod sayılır (ADR-016 K11/2k-vii).
+- B2B tarafı: `INVENTORY_PORT=off|enforce`; "uyar-geçir" modu yok; fail-closed; paylaşımlı D1'deki non-prod dağıtım ayrı `environment_disabled` modundadır (mutasyon yok — ADR-016 K11/2k-vii).
+- B2B sipariş durumları rezervasyon etrafında: `rezervasyon_bekliyor → onay | rezervasyon_basarisiz`; `iptal` terminaldir (yeniden açılmaz). **Tekrar sipariş** = yeni sipariş: satırlar kalıcı `variant_code` (+ `order_unit`, `order_qty`) ile güncel katalogda çözülür, `conversion_factor` K1/3 kuralıyla yeniden hesaplanır, çözülemeyen satır "onay gerekli"; yeni `submission_id` / sipariş no / rezervasyon / `operation_id`; `source_order_id` yalnız izlenebilirlik; stok / cari durum devralınmaz (ADR-016 K9/4). **Açık siparişin rezervasyonu siparişten bağımsız serbest bırakılmaz;** iptal / ret + varsa cari ters kaydı + RELEASE tek idempotent CANCEL op'udur (ADR-016 K5/4, B6k 2026-09-16).
 
 B2B internals web'e expose edilmez.
 
@@ -1942,7 +2016,7 @@ ADR-002-nextjs-app-router
 ADR-003-admin-separate-surface
 ADR-004-product-inventory-ownership-gate
 ADR-005-retail-vs-b2b-pricing
-ADR-006-inventory-ledger-reservation
+ADR-006-inventory-ledger-reservation     (→ ADR-016'da birleşti; ayrı yazılmaz)
 ADR-007-payment-provider
 ADR-008-transactional-outbox
 ADR-009-worker-job-strategy
@@ -1952,12 +2026,30 @@ ADR-012-analytics-event-layer
 ADR-013-content-module
 ADR-014-shipping-provider
 ADR-015-orm-after-b2b-audit
-ADR-016-deployment-portability
+ADR-016-inventory-reservation-contract   (2026-09-16: stok miktar modeli + B2B rezervasyon sözleşmesi)
+ADR-017-deployment-portability           (2026-09-16 öncesi "ADR-016")
 ```
 
 ---
 
 # 101. Uygulama Fazları
+
+**V2.1 (H6):** Bu bölümdeki Faz 0–11 sırası ile `docs/plan/LARANTE_MASTER_PLAN_2026-09-15.md` §18'deki P0–P12 (+7B) sırası iki farklı resmi harita oluşturuyordu. **Master plan §18 yetkilidir**; bu bölüm kapsam listesi olarak kalır. Eşleme:
+
+| ARCH Faz | Master plan Phase |
+|---|---|
+| Faz 0 audit + foundation | P0 (karar kilidi) + P1 (foundation; ledger yalnız ADR-016 onaylıysa) |
+| Faz 1 design system | P2 |
+| Faz 2 identity + content + media | P3 (identity / audit / settings); içerik ve medya P4 / P9 |
+| Faz 3 catalog + retail pricing | P4 |
+| Faz 4 inventory integration | P5 (inventory core + internal sözleşme) + P7B (B2B entegrasyonu; launch'ı bloklar) |
+| Faz 5 cart + checkout + payment | P7 (P6 outbox / bildirim altyapısı önce gelir) |
+| Faz 6 orders + notifications + shipping | P6 + P7 |
+| Faz 7 customer experience | P8 |
+| Faz 8 academy + leads | P9 |
+| Faz 9 analytics + SEO + consent | P10 |
+| Faz 10 premium home | P11 |
+| Faz 11 production hardening | P12 |
 
 ## Faz 0 — B2B Ownership Audit + Foundation
 
@@ -1984,6 +2076,8 @@ Paralelde:
 - lint/test
 
 **Production stok implementation audit sonucu olmadan finalize edilmez.**
+
+**V2.1 çıkış koşulu (ADR-016 §6):** ADR-004 + ADR-016 onaylı; stok birimi (B6b), rezervasyon anı / ömrü (B6c), "yalnız koli" listesi (B6e) karar; tam varyant eşleme **kuralı** kabul (B6a veri eşlemesi P4 import raporunda kanıtlanır). Bu maddeler "tarihli beklemede" olamaz; **kalıcı stok ledger'ı bunlar olmadan yazılmaz** (ADR-016 onaysızsa P1 ledger'sız kapanır; ledger + concurrency testi P5 başına kayar).
 
 ---
 
@@ -2219,6 +2313,7 @@ kontrol eder.
 - [ ] B2B ownership audit tamam
 - [ ] Product/Inventory owner ADR onaylı
 - [ ] ORM ADR onaylı
+- [ ] Stok miktar modeli / B2B rezervasyon sözleşmesi ADR'si (ADR-016) onaylı
 
 ---
 
