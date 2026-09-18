@@ -2,7 +2,7 @@
 
 **Dosya:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Sürüm:** 1.0  
-**Revizyon:** 1.2 — 2026-09-17 (Phase 0 iş kararı paketi 2: B6a/B6e net içerik ≠ stok birimi ve birim sınıfları, B6d açılış sayımı, B6f eskalasyon yetkisi / saati, B6g stok eksikliği politikası, B6h ADR-004 istisna onayı, B6i satın alma maliyeti kaynağı, B4d KDV kaynağı, B5 public satış kapsamı, B3 mimari yön; etkilenen bölümler: §7.1, §12–§14, §19–§21, §30, §31.1–31.4, §77, §80–§83, §110, §115, §117–§118) · 1.1 — 2026-09-16 (stok ve B2B sipariş-rezervasyon kuralları: §31.1–31.8, §41–42, §51, §80–83, §117–118, R13–R18; teknik sözleşme `docs/adr/ADR-016`; ikinci tur 2026-09-16: B6k kararı, kiracı izolasyonu, tekrar sipariş, DB tamsayı guard'ları)  
+**Revizyon:** 1.3 — 2026-09-18 (Phase 0 onay paketi 3: ADR-004 / ADR-016 resmi onayı — §31 karar cümlesi, R12 notu) · 1.2 — 2026-09-17 (Phase 0 iş kararı paketi 2: B6a/B6e net içerik ≠ stok birimi ve birim sınıfları, B6d açılış sayımı, B6f eskalasyon yetkisi / saati, B6g stok eksikliği politikası, B6h ADR-004 istisna onayı, B6i satın alma maliyeti kaynağı, B4d KDV kaynağı, B5 public satış kapsamı, B3 mimari yön; etkilenen bölümler: §7.1, §12–§14, §19–§21, §30, §31.1–31.4, §77, §80–§83, §110, §115, §117–§118) · 1.1 — 2026-09-16 (stok ve B2B sipariş-rezervasyon kuralları: §31.1–31.8, §41–42, §51, §80–83, §117–118, R13–R18; teknik sözleşme `docs/adr/ADR-016`; ikinci tur 2026-09-16: B6k kararı, kiracı izolasyonu, tekrar sipariş, DB tamsayı guard'ları)  
 **Tarih:** 2026-09-15  
 **Durum:** Onaylanmış ana gereksinimler  
 **Kapsam:** Larante Coffee Roastery kurumsal web sitesi, B2C e-ticaret, Larante Akademi, içerik, lead yönetimi ve web yönetim paneli.  
@@ -676,7 +676,7 @@ Tek Yetkili Stok
 
 **İki ayrı stok master kaynağı oluşturulması yasaktır.**
 
-Teknik sahiplik kararı mevcut B2B repository incelemesinden sonra mimari dokümana göre uygulanacaktır. Karar: `docs/adr/ADR-004` (platform owner, B2B tüketici) ve `docs/adr/ADR-016` (miktar modeli ve rezervasyon sözleşmesi).
+Teknik sahiplik kararı mevcut B2B repository incelemesinden sonra mimari dokümana göre uygulanacaktır. Karar: `docs/adr/ADR-004` (platform owner, B2B tüketici) ve `docs/adr/ADR-016` (miktar modeli ve rezervasyon sözleşmesi) — her ikisi proje sahibince **2026-09-18'de onaylandı**.
 
 ## 31.1 Stok Miktar Modeli
 
@@ -2218,7 +2218,7 @@ Analytics gerçek finansal source of truth değildir.
 Bildirim servisindeki hata sipariş verisini kaybettirmemelidir.
 
 ## R12
-Mevcut B2B kodu doğrulanmadan stok/product ownership varsayımı yapılmaz.
+Mevcut B2B kodu doğrulanmadan stok/product ownership varsayımı yapılmaz. *(B2B audit tamamlandı; sahiplik kararı `docs/adr/ADR-004` — onaylı 2026-09-18.)*
 
 ## R13
 Sipariş, stok, rezervasyon, sevkiyat, iade, hasar ve düzeltmede kesirli miktar yoktur; her varyantın tanımlı ticari stok birimi vardır.

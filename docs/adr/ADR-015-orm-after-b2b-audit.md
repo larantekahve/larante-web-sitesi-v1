@@ -1,6 +1,6 @@
 # ADR-015 — ORM Kararı (B2B Audit Sonrası): Tek ORM = Drizzle (PostgreSQL)
 
-**Durum:** TASLAK — onay ve Codex denetimi bekliyor · **Tarih:** 2026-09-15
+**Durum:** ONAYLI — proje sahibi 2026-09-18 (Phase 0 onay paketi 3); Codex denetimi: 2026-09-16 doküman denetimi + 2026-09-16/17 plan ve inspect turları (`LARANTE_CODEX_HANDOFF.md`) · **Tarih:** 2026-09-15 · **Onay:** 2026-09-18
 **Kaynaklar:** ARCH §5.5-5.6, §62-63, §78; `docs/plan/LARANTE_MASTER_PLAN_2026-09-15.md` §11
 
 ## Bağlam
@@ -18,6 +18,8 @@ ARCH §5.6: "B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelik
 3. Yarış-kritik ifadeler (rezervasyon UPDATE, SKIP LOCKED, sequence) Drizzle'ın `sql` şablonuyla açık SQL olarak yazılır ve review edilir; ham SQL yalnız `packages/db` repository implementasyonlarında ve migration dosyalarında.
 4. Platform repo'sunda Prisma/TypeORM/Kysely **yasak** (lint + dependency review). B2B'ye ORM eklenmez.
 5. **İki-ORM riski aynı domain için yoktur:** B2B (D1/SQLite, ham SQL) ile platform (Postgres, Drizzle) hiçbir tablo, migration veya bağlantı paylaşmaz; tek bağ HTTP sözleşmesi (ADR-001) + `variant_external_codes` (ADR-004 §3.4, ADR-016 K6 — 2026-09-16 öncesi `product_external_codes`). Gerçek risk şema **çiftlenmesi**dir (B2B `products` projeksiyonu vs platform `products`) — bu, "B2B'de katalog migration'ları dondurulur, ad/kategori B2B'de düzenlenmez" kuralıyla sınırlanır.
+**Onay notu (proje sahibi, 2026-09-18):** yeni platformun yetkili veritabanı **PostgreSQL**, platform ORM'i **Drizzle ORM**; yarış / eşzamanlılık-kritik envanter işlemleri (Karar 3) onaylı repository / migration sınırı içinde **açık, gözden geçirilmiş SQL** kullanabilir; platforma **rakip bir ORM eklenmez**; mevcut B2B kendi mimarisine göre **D1 / SQLite / ham SQL** olarak kalır. **Bu onay sağlayıcı markası (Postgres barındırma, hosting) onayı değildir** — sağlayıcı seçimleri B3 / B7 ve henüz yazılmamış deployment ADR'si (ADR-017) ile tarihli beklemededir.
+
 6. Tipler: para `INTEGER` kuruş, oranlar basis point `INTEGER`; **miktarlar tamsayı** — bakiyeler (`on_hand`, `reserved`) `INTEGER CHECK (>= 0)`, fiziksel hareket ve rezervasyon olayı miktarları `INTEGER CHECK (> 0)` + açık yön / aksiyon (işaretli delta yok; ayrıntı ADR-016 K2); `REAL/float` yasak (B2B'nin REAL borcu taşınmaz). Tüm id UUID.
 
 ## Reddedilenler
@@ -28,4 +30,4 @@ ARCH §5.6: "B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelik
 Drizzle'ın relational API'si Prisma kadar olgun değil; karşılığında migration SQL'i şeffaf ve DB kısıtları doğrudan yazılır. Concurrency integration testleri (gerçek Postgres) CI kapısıdır.
 
 ## İlgili
-ADR-001, ADR-004, ADR-016 (stok miktar modeli / rezervasyon sözleşmesi — tip kuralının kaynağı), ADR-017 (deployment; eski "ADR-016" numarası).
+ADR-001, ADR-004, ADR-016 (stok miktar modeli / rezervasyon sözleşmesi — tip kuralının kaynağı), ADR-017 (deployment / sağlayıcı — **henüz yazılmadı**; B3 / B7 ile tarihli beklemede 2026-09-18, Phase 1'i bloklamaz; 2026-09-16 öncesi "ADR-016" olarak anılıyordu).

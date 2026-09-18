@@ -1,7 +1,7 @@
 # ADR-004 — Product / Inventory Ownership Gate
 
-**Durum:** TASLAK — proje sahibi onayı ve Codex adversarial denetimi bekliyor
-**Tarih:** 2026-09-15 · **Değişiklik notu (2026-09-16, dal `docs/stok-b2b-v2-1`):** §3.2, §3.4, §3.5, §3.7, §3.8, §3.9, §4, §5, §6 ve §8 `docs/adr/ADR-016` (stok miktar modeli ve B2B rezervasyon sözleşmesi) ile hizalandı. §3.5 ve §3.7'deki istisnalar o tarihte proje sahibi onayı bekliyordu (ADR-016 §7 U7). **Değişiklik notu (2026-09-17, dal `docs/phase0-business-decisions-v2`):** §3.5 ve §3.7 istisnaları proje sahibince **onaylandı (B6h; U7 kapandı)**; §3.10 (açılış sayımı — B6d), §3.11 (Logo salt-okunur — B6i / B4d) ve §6 satır 4, 5, 8, 9 Phase 0 karar paketi 2 ile güncellendi. ADR'nin bütünü (Seçenek B — B1) hâlâ TASLAK / onay bekliyor.
+**Durum:** ONAYLI — proje sahibi 2026-09-18 (Seçenek B bütünü; Phase 0 onay paketi 3 — B1 kapandı); Codex adversarial denetimi: 2026-09-16 doküman denetimi (F01–F18) + PR #1 / PR #2 taze inspect turları (son verdictler APPROVED, 2026-09-17)
+**Tarih:** 2026-09-15 · **Değişiklik notu (2026-09-16, dal `docs/stok-b2b-v2-1`):** §3.2, §3.4, §3.5, §3.7, §3.8, §3.9, §4, §5, §6 ve §8 `docs/adr/ADR-016` (stok miktar modeli ve B2B rezervasyon sözleşmesi) ile hizalandı. §3.5 ve §3.7'deki istisnalar o tarihte proje sahibi onayı bekliyordu (ADR-016 §7 U7). **Değişiklik notu (2026-09-17, dal `docs/phase0-business-decisions-v2`):** §3.5 ve §3.7 istisnaları proje sahibince **onaylandı (B6h; U7 kapandı)**; §3.10 (açılış sayımı — B6d), §3.11 (Logo salt-okunur — B6i / B4d) ve §6 satır 4, 5, 8, 9 Phase 0 karar paketi 2 ile güncellendi. ADR'nin bütünü (Seçenek B — B1) o tarihte onay bekliyordu. **Değişiklik notu (2026-09-18, dal `docs/phase0-final-approvals`):** ADR bütünü proje sahibince **onaylandı (B1 kapandı)** — platform / PostgreSQL ürün kimliği ve envanter master'ıdır; mevcut B2B tüketici / kanal projeksiyonudur, envanter master'ı değildir; B2B fiyatlaması onaylı sözleşmeye göre B2B'de kalır; varyant düzeyi dış kod eşlemesi entegrasyon kimlik köprüsüdür; B6h istisnaları (§3.5, §3.7) onaylı kalır; ikinci envanter master'ı yoktur. §6 satır 1–2 kapandı. Somut B2B → varyant eşleme verisi (§6 satır 9, B6a) veri hazırlığı olarak açıktır ve icat edilmez.
 **Kaynaklar:** `LARANTE_WEB_REQUIREMENTS.md` §31, §112, R2, R12 · `LARANTE_WEB_ALTYAPI_MIMARISI_V2.md` §3 (Production Gate), §12-18, §87-89, §101 Faz 0, §107 G1/G2/G14 · `docs/plan/LARANTE_MASTER_PLAN_2026-09-15.md` §7-9
 **Audit referansı:** B2B repo `C:\Users\Monster\Desktop\Larante Web Sitesi\b2b-portal\larante-b2b\app` — git HEAD `d75dc7d`, dal `refactor/tenant-foundation` (tüm satır referansları bu HEAD'e göredir)
 
@@ -73,14 +73,14 @@ Server-side authoritative: `OrderSchema` fiyat kabul etmez; `dealerPrice / effec
 - Web checkout ve B2B siparişi aynı `inventory_balances` satırına dokunur; oversell testi ("N eşzamanlı rezervasyon toplamı on_hand'i aşamaz") CI kapısıdır (Phase 1'den itibaren).
 - B2B siparişi platform-api erişilebilirliğine bağımlı hale gelir (fail-closed). Bilinçli tercih: iki master'dan kötü değildir.
 - P7B'ye kadar B2B bugünkü gibi stoksuz çalışır (risk artmaz); geçiş prosedürü §3.12.
-- ARCH V2.1 (2026-09-16): §87 düzeltildi; §5.4/§5.6 düzeltmesi B10 kapsamında beklemede.
+- ARCH V2.1 (2026-09-16): §87 düzeltildi; §5.4/§5.6 metni ARCH V2.3 notuyla (2026-09-18) ADR-001 / ADR-015 ve Hono + zod-openapi scaffold kararıyla hizalandı (B10 kalanı tarihli beklemede).
 - P7B B2B PR'ı ADR-016 K12 ile büyür: bir additive D1 migration, `submission_id` + parmak izi, op kaydı, cari borcun `onay`'a taşınması, iptal-geri-alışın kaldırılması, tamsayı doğrulama, imzalı anlık görüntü ucu.
 
-## 6. Ön koşullar / açık maddeler (bu ADR'yi kilitlemeden önce)
+## 6. Ön koşullar / açık maddeler — ADR onayı ön koşulları **kapandı (2026-09-18: satır 1, 2, 3, 4-kural, 8)**; satır 5 (tarih), 6, 7 ve 9 **uygulama ön koşullarıdır** (P4 import / P7B / launch) — ADR'nin onayını değil ilgili fazı bloklar
 | # | Madde | Sahip | Durum |
 |---|---|---|---|
-| 1 | Proje sahibi onayı (Seçenek B) | Proje sahibi | BEKLİYOR |
-| 2 | Codex adversarial denetimi | Codex | BEKLİYOR |
+| 1 | Proje sahibi onayı (Seçenek B) | Proje sahibi | **ONAY 2026-09-18** (ADR bütünü; B1 kapandı) |
+| 2 | Codex adversarial denetimi | Codex | **TAMAMLANDI** — 2026-09-16 doküman denetimi (F01–F18, master plan §23) + PR #1 / PR #2 taze inspect turları (son verdictler APPROVED, 2026-09-17) |
 | 3 | A-13: rezervasyon anı, ömrü, yetersiz stok davranışı, hangi B2B geçişi hangi hareketi üretir | Proje sahibi | **KARAR 2026-09-16** — ADR-016 K3–K5, K9 (ADR-016 onayıyla kilitlenir) |
 | 4 | Stok birimi: varyantın ticari birimi, tamsayı; B2B koli yalnız tamsayı katı + snapshot; donuk pasta kutu; bulk kg → paket ertelendi | Proje sahibi | **KARAR 2026-09-16** — ADR-016 K1, K7; **birim sınıfları KARAR 2026-09-17 (B6a/B6e):** net içerik ≠ stok birimi; PAKET / ŞİŞE / ADET / KUTU; onaylı gruplarda koli stok birimi yok; varyant başına koli içi adet / kutu içi parça sayısı **verisi** AÇIK |
 | 5 | Fiziksel sayım tarihi ve sayım runbook'u | Depo | **Runbook kuralları KARAR 2026-09-17 (B6d):** Depo sayar, Yönetici onaylar, audit, COUNT_ADJUSTMENT; **tarih AÇIK** (planlama; varyant kataloğu sonrası) |
@@ -94,4 +94,4 @@ Server-side authoritative: `OrderSchema` fiyat kabul etmez; `dealerPrice / effec
 - B2B tarafı: `INVENTORY_PORT=off` → bugünkü davranış (stok kontrolsüz) — yalnız üretim dağıtımında; paylaşımlı D1'deki non-prod dağıtım `environment_disabled` kalır (ADR-016 K11/2k-vii). Kolon silinmediği için şema geri alma gerekmez.
 
 ## 8. İlgili ADR'ler
-ADR-001 (platform structure — ayrı repo + vendored contract), ADR-015 (ORM — Drizzle), **ADR-016 (stok miktar modeli, fiziksel/rezerve ayrımı, B2B rezervasyon yaşam döngüsü, tam varyant bağlama, tamsayı birim, idempotency, mutabakat — bu ADR'nin §3.2/§3.4/§3.5/§3.7/§3.8/§3.9 ayrıntısı; ARCH §100'deki "ADR-006" konusunu kapsar)**, ADR-017 (deployment/Postgres; 2026-09-16 öncesi "ADR-016"), ADR-010 (identity boundary).
+ADR-001 (platform structure — ayrı repo + vendored contract), ADR-015 (ORM — Drizzle), **ADR-016 (stok miktar modeli, fiziksel/rezerve ayrımı, B2B rezervasyon yaşam döngüsü, tam varyant bağlama, tamsayı birim, idempotency, mutabakat — bu ADR'nin §3.2/§3.4/§3.5/§3.7/§3.8/§3.9 ayrıntısı; ARCH §100'deki "ADR-006" konusunu kapsar)**, ADR-017 (deployment / sağlayıcı — **henüz yazılmadı**; B3 / B7 ile tarihli beklemede 2026-09-18, Phase 1'i bloklamaz; 2026-09-16 öncesi "ADR-016" olarak anılıyordu), ADR-010 (identity boundary).
