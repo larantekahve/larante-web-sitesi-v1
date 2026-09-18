@@ -1,8 +1,8 @@
 # LARANTE WEB PLATFORMU — ALTYAPI VE MİMARİ KARAR DOKÜMANI V2
 
 **Dosya:** `LARANTE_WEB_ALTYAPI_MIMARISI_V2.md`  
-**Sürüm:** 2.2  
-**Tarih:** 2026-09-15 (V2.0) · 2026-09-16 (V2.1 revizyonu) · 2026-09-17 (V2.2 — Phase 0 karar paketi 2)  
+**Sürüm:** 2.3  
+**Tarih:** 2026-09-15 (V2.0) · 2026-09-16 (V2.1 revizyonu) · 2026-09-17 (V2.2 — Phase 0 karar paketi 2) · 2026-09-18 (V2.3 — Phase 0 onay paketi 3)  
 **Durum:** Gereksinim sonrası revize ana mimari  
 **Kaynak gereksinim:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Önceki sürüm:** `LARANTE_WEB_ALTYAPI_MIMARISI_V1.md`
@@ -26,7 +26,7 @@ Bu revizyon yalnız **stok miktar modeli ve B2B sipariş-rezervasyon sözleşmes
 | §101 | Master plan §18 yetkili faz haritası; eşleme tablosu; Faz 0 çıkış koşulu |
 | §106 | DoD'ye ADR-016 |
 
-**Bu revizyonda dokunulmayan bilinen düzeltmeler (B10):** §5.4 "Node/Express" ve §5.6 "Prisma" varsayımları gerçek B2B (Bun + TanStack Start + Workers + D1, ORM yok) ile çelişir — ADR-001 / ADR-015 geçerlidir; metin ayrı bir V2.2 notuyla düzeltilecektir. Ertelenen denetim bulguları: master plan §23, `docs/decisions/PHASE0_KARAR_LISTESI.md` §E.
+**Bu revizyonda dokunulmayan bilinen düzeltmeler (B10):** §5.4 "Node/Express" ve §5.6 "Prisma" varsayımları gerçek B2B (Bun + TanStack Start + Workers + D1, ORM yok) ile çelişir — ADR-001 / ADR-015 geçerlidir; metin V2.3 notuyla (2026-09-18) §5.4 / §5.6 içinde hizalanmıştır. Ertelenen denetim bulguları: master plan §23, `docs/decisions/PHASE0_KARAR_LISTESI.md` §E.
 
 ---
 
@@ -46,6 +46,23 @@ Bu revizyon yalnız proje sahibinin 2026-09-17'de onayladığı ikinci Phase 0 i
 | §97–98 | www / admin / b2b alan adı yönü kabul (B3); DNS / hosting ayrıntısı açık |
 
 **Bu revizyonda dokunulmayanlar:** §5.4 / §5.6 düzeltmesi (B10) yine ertelenmiştir; sağlayıcı seçimleri (B3 kalanı, B7, ADR-017) açıktır.
+
+---
+
+# 0b. V2.3 Revizyon Notu — 2026-09-18 (Phase 0 onay paketi 3)
+
+Bu revizyon yalnız Phase 0 kapanış onaylarını işler: ADR-001, ADR-004 (Seçenek B bütünü), ADR-015 ve ADR-016 proje sahibince **onaylandı**; `platform-api` scaffold'u **Hono + zod-openapi** ve uygulama deposu adı **`larante-platform`** karara bağlandı; B6e Phase 1 ledger kapısı sağlandı; B10 kalanı ve deployment / sağlayıcı ADR'si (ADR-017 — henüz yazılmadı) tarihli beklemede. Karar kaydı: `docs/decisions/PHASE0_KARAR_LISTESI.md` §D / §F. Hiçbir mimari kural yeniden tasarlanmamıştır.
+
+| Bölüm | Değişiklik |
+|---|---|
+| §5.4 | Framework kararı: Hono + zod-openapi (2026-09-18); B2B "Node/Express uyum" cümlesi geçersiz (B2B Bun + TanStack Start + Workers) |
+| §5.6 | "Henüz kilitlenmez" → kilitlendi: ADR-015 onaylı (Drizzle); Prisma öncelik kuralı geçersiz |
+| §100 | ADR-017 henüz yazılmadı — tarihli beklemede |
+| §101 | Faz 0 çıkış koşulu sağlandı (ADR-004 + ADR-016 onaylı; B6b / B6c / B6e birim sınıfları karar) |
+| §106 | DoD: ownership audit, ownership ADR, ORM ADR, ADR-016 kutuları işaretlendi |
+| Kapanış | "Bir sonraki zorunlu teknik adım" tamamlandı → Phase 1 görev dosyaları |
+
+**Tarihli beklemede (2026-09-18, B10 kalanı):** V2.1–V2.3 notlarıyla düzeltilen bölümlerin gövde metnine editoryal konsolidasyonu (Phase 1 sonu belge bakımı); B2B tarafı belgelerinin senkronu (P7B). Sağlayıcı seçimleri (B3 kalanı, B7, ADR-017) açıktır.
 
 ---
 
@@ -266,18 +283,20 @@ Framework kararı scaffold aşamasında ADR ile sabitlenebilir.
 
 Mevcut B2B Node/Express yapısı gerçekten doğrulanırsa uyum önceliklidir.
 
+**V2.3 (2026-09-18) — karar verildi:** `platform-api` framework'ü **Hono**, API şeması / OpenAPI yönü **zod-openapi** (Phase 1 scaffold seçimi; karar kaydı `docs/decisions/PHASE0_KARAR_LISTESI.md` scaffold satırı + master plan §10; ayrı ADR dosyası yazılmaz). Yukarıdaki "B2B Node/Express … uyum önceliklidir" koşulu **boştur ve geçersizdir**: audit B2B'nin Bun + TanStack Start + Cloudflare Workers olduğunu doğruladı (ADR-001 kanıtı); uyum önceliği yoktur.
+
 ## 5.5 Database
 
 - PostgreSQL
 
 ## 5.6 ORM
 
-**Henüz kilitlenmez.**
+**Kilitlendi — ADR-015 ONAYLI (2026-09-18):** platform ORM'i **Drizzle ORM** (PostgreSQL); yarış-kritik envanter işlemleri onaylı repository / migration sınırında açık, gözden geçirilmiş SQL ile; platforma rakip ORM eklenmez; mevcut B2B D1 / SQLite / ham SQL kalır. *(V2.3 notu — aşağıdaki V2.0 kuralının Prisma öncelik maddesi geçersizdir: audit B2B'de ORM olmadığını doğruladı, ADR-015 kanıtı.)*
 
-Kural:
+Kural (V2.0 metni; ilk madde geçersiz):
 
-- B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelikli değerlendirilir.
-- Aksi durumda güncel alternatifler ADR ile değerlendirilir.
+- ~~B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelikli değerlendirilir.~~ (koşul boş — geçersiz)
+- Aksi durumda güncel alternatifler ADR ile değerlendirilir → ADR-015: Drizzle (onaylı).
 - Aynı domain için `Prisma + Drizzle + başka ORM` birlikte kullanılmaz.
 
 ## 5.7 Object Storage
@@ -2065,7 +2084,7 @@ ADR-013-content-module
 ADR-014-shipping-provider
 ADR-015-orm-after-b2b-audit
 ADR-016-inventory-reservation-contract   (2026-09-16: stok miktar modeli + B2B rezervasyon sözleşmesi)
-ADR-017-deployment-portability           (2026-09-16 öncesi "ADR-016")
+ADR-017-deployment-portability           (2026-09-16 öncesi "ADR-016"; **henüz yazılmadı** — deployment / sağlayıcı seçimleri B3 / B7 ile tarihli beklemede 2026-09-18, Phase 1'i bloklamaz)
 ```
 
 ---
@@ -2115,7 +2134,7 @@ Paralelde:
 
 **Production stok implementation audit sonucu olmadan finalize edilmez.**
 
-**V2.1 çıkış koşulu (ADR-016 §6):** ADR-004 + ADR-016 onaylı; stok birimi (B6b), rezervasyon anı / ömrü (B6c), "yalnız koli" listesi (B6e) karar; tam varyant eşleme **kuralı** kabul (B6a veri eşlemesi P4 import raporunda kanıtlanır). Bu maddeler "tarihli beklemede" olamaz; **kalıcı stok ledger'ı bunlar olmadan yazılmaz** (ADR-016 onaysızsa P1 ledger'sız kapanır; ledger + concurrency testi P5 başına kayar).
+**V2.1 çıkış koşulu (ADR-016 §6) — V2.3: sağlandı (2026-09-18):** ADR-004 + ADR-016 **onaylı**; stok birimi (B6b), rezervasyon anı / ömrü (B6c) karar; B6e **birim sınıfları** karar (paket / şişe / kutu / adet; proje sahibi hükmü: Phase 1 ledger kapısı sağlandı — varyant başına SKU verisi P4 / P7B veri hazırlığıdır, Phase 1'i bloklamaz); tam varyant eşleme **kuralı** kabul (B6a veri eşlemesi P4 import raporunda kanıtlanır). Kalıcı stok ledger'ı Phase 1'in ilk kodudur (`docs/tasks/PHASE1/P1-T05`); "ADR-016 onaysızsa P1 ledger'sız kapanır" yedek yolu tarihçedir.
 
 ---
 
@@ -2348,10 +2367,10 @@ kontrol eder.
 - [ ] CI
 - [ ] env validation
 - [ ] security baseline
-- [ ] B2B ownership audit tamam
-- [ ] Product/Inventory owner ADR onaylı
-- [ ] ORM ADR onaylı
-- [ ] Stok miktar modeli / B2B rezervasyon sözleşmesi ADR'si (ADR-016) onaylı
+- [x] B2B ownership audit tamam (ADR-004 kanıt bölümü; 2026-09-18 kapanış)
+- [x] Product/Inventory owner ADR onaylı (ADR-004 — 2026-09-18)
+- [x] ORM ADR onaylı (ADR-015 — 2026-09-18)
+- [x] Stok miktar modeli / B2B rezervasyon sözleşmesi ADR'si (ADR-016) onaylı (2026-09-18)
 
 ---
 
@@ -2469,7 +2488,7 @@ Provider-independent Payment/SMS/Shipping/Analytics
 ```
 
 **Bir sonraki zorunlu teknik adım:**  
-Mevcut B2B repository'nin Product / Inventory / ORM / Auth / API gerçekliğini incelemek ve `ADR-004-product-inventory-ownership-gate` kararını kapatmak.
+~~Mevcut B2B repository'nin Product / Inventory / ORM / Auth / API gerçekliğini incelemek ve `ADR-004-product-inventory-ownership-gate` kararını kapatmak.~~ **Tamamlandı (2026-09-18):** audit yapıldı, ADR-004 onaylandı. Sonraki adım: Phase 1 görev dosyaları (`docs/tasks/PHASE1/`) — scaffold / altyapı temelleri + onaylı envanter ledger / concurrency sözleşmesi.
 
 **Bir sonraki tasarım dokümanı:**  
 `LARANTE_DESIGN_SYSTEM.md`
