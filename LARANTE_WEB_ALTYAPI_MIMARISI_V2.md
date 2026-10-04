@@ -1,8 +1,8 @@
 # LARANTE WEB PLATFORMU — ALTYAPI VE MİMARİ KARAR DOKÜMANI V2
 
 **Dosya:** `LARANTE_WEB_ALTYAPI_MIMARISI_V2.md`  
-**Sürüm:** 2.3  
-**Tarih:** 2026-09-15 (V2.0) · 2026-09-16 (V2.1 revizyonu) · 2026-09-17 (V2.2 — Phase 0 karar paketi 2) · 2026-09-18 (V2.3 — Phase 0 onay paketi 3)  
+**Sürüm:** 2.4  
+**Tarih:** 2026-09-15 (V2.0) · 2026-09-16 (V2.1 revizyonu) · 2026-09-17 (V2.2 — Phase 0 karar paketi 2) · 2026-09-18 (V2.3 — Phase 0 onay paketi 3) · 2026-10-04 (V2.4 — konsolidasyon: V2.1–V2.3 notları gövdeye işlendi, P1-T07; yeni kural yok)  
 **Durum:** Gereksinim sonrası revize ana mimari  
 **Kaynak gereksinim:** `LARANTE_WEB_REQUIREMENTS.md`  
 **Önceki sürüm:** `LARANTE_WEB_ALTYAPI_MIMARISI_V1.md`
@@ -28,6 +28,8 @@ Bu revizyon yalnız **stok miktar modeli ve B2B sipariş-rezervasyon sözleşmes
 
 **Bu revizyonda dokunulmayan bilinen düzeltmeler (B10):** §5.4 "Node/Express" ve §5.6 "Prisma" varsayımları gerçek B2B (Bun + TanStack Start + Workers + D1, ORM yok) ile çelişir — ADR-001 / ADR-015 geçerlidir; metin V2.3 notuyla (2026-09-18) §5.4 / §5.6 içinde hizalanmıştır. Ertelenen denetim bulguları: master plan §23, `docs/decisions/PHASE0_KARAR_LISTESI.md` §E.
 
+**Gövdeye işlendi (P1-T07, 2026-10-04):** bu nottaki değişiklikler ilgili bölümlerin gövde metnine işlendi (V2.4 konsolidasyonu); bu not revizyon tarihçesi olarak korunur.
+
 ---
 
 # 0a. V2.2 Revizyon Notu — 2026-09-17 (Phase 0 karar paketi 2)
@@ -47,6 +49,8 @@ Bu revizyon yalnız proje sahibinin 2026-09-17'de onayladığı ikinci Phase 0 i
 
 **Bu revizyonda dokunulmayanlar:** §5.4 / §5.6 düzeltmesi (B10) yine ertelenmiştir; sağlayıcı seçimleri (B3 kalanı, B7, ADR-017) açıktır.
 
+**Gövdeye işlendi (P1-T07, 2026-10-04):** bu nottaki değişiklikler ilgili bölümlerin gövde metnine işlendi (V2.4 konsolidasyonu); bu not revizyon tarihçesi olarak korunur.
+
 ---
 
 # 0b. V2.3 Revizyon Notu — 2026-09-18 (Phase 0 onay paketi 3)
@@ -63,6 +67,8 @@ Bu revizyon yalnız Phase 0 kapanış onaylarını işler: ADR-001, ADR-004 (Se�
 | Kapanış | "Bir sonraki zorunlu teknik adım" tamamlandı → Phase 1 görev dosyaları |
 
 **Tarihli beklemede (2026-09-18, B10 kalanı):** V2.1–V2.3 notlarıyla düzeltilen bölümlerin gövde metnine editoryal konsolidasyonu (Phase 1 sonu belge bakımı); B2B tarafı belgelerinin senkronu (P7B). Sağlayıcı seçimleri (B3 kalanı, B7, ADR-017) açıktır.
+
+**Gövdeye işlendi (P1-T07, 2026-10-04):** bu nottaki değişiklikler ilgili bölümlerin gövde metnine işlendi; yukarıdaki tarihli beklemedeki ilk kalem (V2.1–V2.3 notlarının gövdeye editoryal konsolidasyonu) bu V2.4'tür (tamamlanma kaydı: `docs/decisions/PHASE0_KARAR_LISTESI.md` B10 satırı); B2B tarafı belge senkronu (P7B) açıktır. Bu not revizyon tarihçesi olarak korunur.
 
 ---
 
@@ -197,7 +203,7 @@ Bu sistem kalıcı mimari olarak kabul edilmez.
 
 # 4. Repository Yapısı
 
-Önerilen V2 monorepo:
+Yapı **ADR-001** ile karara bağlandı (ONAYLI 2026-09-18): yeni uygulama deposu / çalışma alanı **`larante-platform`** (pnpm + Turborepo; Node 22 LTS; TS strict).
 
 ```text
 larante-platform/
@@ -209,37 +215,32 @@ larante-platform/
 │   └── worker/
 │
 ├── packages/
-│   ├── ui/
-│   ├── design-tokens/
 │   ├── domain/
 │   ├── application/
+│   ├── db/
+│   ├── adapters/
+│   ├── identity/
 │   ├── contracts/
 │   ├── analytics/
+│   ├── ui/
+│   ├── design-tokens/
 │   ├── config/
 │   ├── observability/
 │   └── testing/
 │
+├── tools/
+├── data/
 ├── docs/
-│   ├── requirements/
-│   ├── architecture/
-│   └── adr/
+├── infra/
 │
 ├── pnpm-workspace.yaml
 ├── turbo.json
 └── pnpm-lock.yaml
 ```
 
-`apps/b2b` şimdilik zorunlu olarak bu repo içine taşınmaz.
+Ayrıntılı ağaç: master plan §10 (ADR-001 §Karar 1). Dokümantasyonun çalışma alanıyla ilişkisi `docs/tasks/PHASE1/P1-T01` görev dosyasında tanımlıdır.
 
-B2B repo audit sonrası:
-
-- aynı monorepo
-- ayrı repo + API
-- kademeli birleştirme
-
-kararı ADR ile alınır.
-
-**Yön kabul (B3 — 2026-09-17):** mevcut B2B ayrı bir sistem / repo olarak kalır ve yeni platformla **onaylı sürümlü API sözleşmesi** üzerinden konuşur; zorla birleştirilmez. B2B D1 yalnız B2B-yerel durumdur, paylaşımlı envanter gerçeği değildir (Platform / PostgreSQL yetkili). Bu yön ADR-001 taslağıyla uyumludur; ADR-001'in resmi onayı ayrı bir kalemdir.
+Mevcut B2B ayrı bir sistem / repo olarak kalır (ADR-001 §Karar 2) ve yeni platformla **onaylı sürümlü API sözleşmesi** üzerinden konuşur (ADR-001 §Karar 3); zorla birleştirilmez (B3 yön kabulü 2026-09-17). B2B D1 yalnız B2B-yerel durumdur, paylaşımlı envanter gerçeği değildir (Platform / PostgreSQL yetkili). `apps/b2b` kademeli birleşmesi yalnız ADR-001 §Karar 4'teki koşullarla, ayrı bir ADR ile yeniden açılır.
 
 ---
 
@@ -277,13 +278,9 @@ Admin public web içine `/admin` route olarak karıştırılmayacaktır.
 - modüler monolit
 - REST/HTTP contracts
 - repository/adapter sınırları
-- OpenAPI sözleşmesi önerilir
+- OpenAPI sözleşmesi (zod-openapi)
 
-Framework kararı scaffold aşamasında ADR ile sabitlenebilir.
-
-Mevcut B2B Node/Express yapısı gerçekten doğrulanırsa uyum önceliklidir.
-
-**V2.3 (2026-09-18) — karar verildi:** `platform-api` framework'ü **Hono**, API şeması / OpenAPI yönü **zod-openapi** (Phase 1 scaffold seçimi; karar kaydı `docs/decisions/PHASE0_KARAR_LISTESI.md` scaffold satırı + master plan §10; ayrı ADR dosyası yazılmaz). Yukarıdaki "B2B Node/Express … uyum önceliklidir" koşulu **boştur ve geçersizdir**: audit B2B'nin Bun + TanStack Start + Cloudflare Workers olduğunu doğruladı (ADR-001 kanıtı); uyum önceliği yoktur.
+**Framework kararı (2026-09-18):** `platform-api` framework'ü **Hono**, API şeması / OpenAPI yönü **zod-openapi** (Phase 1 scaffold seçimi; karar kaydı `docs/decisions/PHASE0_KARAR_LISTESI.md` scaffold satırı + master plan §10; ayrı ADR dosyası yazılmaz). B2B ile framework uyum önceliği yoktur: audit B2B'nin Bun + TanStack Start + Cloudflare Workers olduğunu doğruladı (ADR-001 kanıtı); iki sistem yalnız sürümlü HTTP sözleşmesiyle konuşur (§4).
 
 ## 5.5 Database
 
@@ -291,12 +288,10 @@ Mevcut B2B Node/Express yapısı gerçekten doğrulanırsa uyum önceliklidir.
 
 ## 5.6 ORM
 
-**Kilitlendi — ADR-015 ONAYLI (2026-09-18):** platform ORM'i **Drizzle ORM** (PostgreSQL); yarış-kritik envanter işlemleri onaylı repository / migration sınırında açık, gözden geçirilmiş SQL ile; platforma rakip ORM eklenmez; mevcut B2B D1 / SQLite / ham SQL kalır. *(V2.3 notu — aşağıdaki V2.0 kuralının Prisma öncelik maddesi geçersizdir: audit B2B'de ORM olmadığını doğruladı, ADR-015 kanıtı.)*
+**ADR-015 ONAYLI (2026-09-18):** platform ORM'i **Drizzle ORM** (PostgreSQL); yarış-kritik envanter işlemleri onaylı repository / migration sınırında açık, gözden geçirilmiş SQL ile; platforma rakip ORM eklenmez; mevcut B2B D1 / SQLite / ham SQL kalır (audit B2B'de ORM olmadığını doğruladı — ADR-015 kanıtı).
 
-Kural (V2.0 metni; ilk madde geçersiz):
+Kural:
 
-- ~~B2B gerçekten Prisma kullanıyorsa ortaklık için Prisma öncelikli değerlendirilir.~~ (koşul boş — geçersiz)
-- Aksi durumda güncel alternatifler ADR ile değerlendirilir → ADR-015: Drizzle (onaylı).
 - Aynı domain için `Prisma + Drizzle + başka ORM` birlikte kullanılmaz.
 
 ## 5.7 Object Storage
@@ -507,35 +502,18 @@ Product: Cappadocia Espresso
 
 # 13. Varyant Patlamasını Önleme
 
-Öğütüm:
+Öğütüm `PreparationOption` (sipariş hazırlama tercihi) olarak tutulur ve stok-belirleyici varyant kimliğinin (`variant_key`, aşağıda) parçası değildir; bu nedenle `roast × weight × grind` kombinasyonlarında öğütüm ayrı fiziksel stok kalemi üretmez — ayrı stok kalemini yalnız stok-belirleyici boyutlar belirler (REQ §15, R4; ADR-004 §3/1: `preparation_options` stok kalemi değil; ADR-016 K6/2; master plan §8: "öğütüm stok etkisi yok").
 
-```text
-PreparationOption
-```
-
-olarak tutulması tercih edilir.
-
-Yani:
-
-```text
-roast × weight × grind
-```
-
-her kombinasyon için ayrı fiziksel stok zorunlu değildir.
-
-**V2.1 — kesinleşti (ADR-016 K1, K6, K7):**
+Stok modeli (ADR-016 K1, K6, K7; B6a / B6e KARAR 2026-09-17 — ADR-016 K1/2, K6/2, K7/5):
 
 - Fiziksel stok kalemi = **satılabilir varyant** (`SellableVariant` ↔ `InventoryItem` 1:1). Varyant kimliği stoku belirleyen tüm boyutları taşır: kavrum / kullanım tipi, gramaj, ambalaj, kutu konfigürasyonu (`variant_key`; `UNIQUE (product_id, variant_key)`).
+- **`variant_key`** kullanım tipini içerir: `usage_type | roast_level | weight_g | packaging_code | box_config` (`usage_type ∈ {espresso, filtre, -}`) — aynı aile adı altında espresso ve filtre ayrı SKU'dur (ADR-016 K6/2).
 - Her varyantın zorunlu bir **ticari stok birimi** (`stock_unit`: paket / şişe / kutu / koli / adet …) vardır; tüm miktarlar bu birimin **tam sayı** katıdır. Kesirli miktar hiçbir yerde yoktur.
+- **Net içerik ≠ stok birimi:** 1 kg / 2,5 kg / 750 ml / 2 L ürünün net içeriğidir; envanter kg, litre ya da ml ile izlenmez. Ticari stok birimi bitmiş ürünün nasıl satılıp sayıldığıyla belirlenir: **PAKET** (1 kg kahve — espresso / filtre ayrı SKU; 1 kg toz ürünler; 100 / 250 / 300 g çay, her gramaj ayrı SKU), **ŞİŞE** (750 ml şurup; 1 kg meyve püresi; 2,5 kg bar sosu; 2,5 kg baz), **ADET** (6 kg demlik poşet çay; 2 L Frozen Lemonade / Frozen Orange Juice), **KUTU** (donuk pasta). Net içerik modellendiğinde tamsayı taban birimle (ör. 2500 g, 750 ml, 2000 ml) tanımlayıcı alandır, operasyonel miktar değildir. Onaylı gruplarda ticari birimi koli olan varyant yoktur; B2B koli (kasa) modu ve snapshot'lı `box_count` (koli içi adet) değişmez.
 - Koli (packaging conversion) yalnız **tamsayı katı** olarak ve sipariş satırına snapshot'lanmış `box_count` ile vardır; ticari birimi koli olan varyantta dönüşüm yoktur. Belirsiz / kesirli kutu-birim dönüşümü yasaktır.
 - Donuk pasta: `stock_unit = kutu`; yarım / kısmi / dilim hareketi yok; karışık kutu yok; farklı içerik veya dilim sayısı ayrı varyant; kutu içeriği tanımlayıcıdır (REQ §31.3).
-- Bulk (dökme kg) envanteri ve kg → paket dönüşümü **V1 dışıdır**.
-
-**V2.2 — B6a/B6e KARAR 2026-09-17 (ADR-016 K1/2, K6/2, K7/5):**
-
-- **Net içerik ≠ stok birimi:** 1 kg / 2,5 kg / 750 ml / 2 L ürünün net içeriğidir; envanter kg, litre ya da ml ile izlenmez. Ticari stok birimi bitmiş ürünün nasıl satılıp sayıldığıyla belirlenir: **PAKET** (1 kg kahve — espresso / filtre ayrı SKU; 1 kg toz ürünler; 100 / 250 / 300 g çay, her gramaj ayrı SKU), **ŞİŞE** (750 ml şurup; 1 kg meyve püresi; 2,5 kg bar sosu; 2,5 kg baz), **ADET** (6 kg demlik poşet çay; 2 L Frozen Lemonade / Frozen Orange Juice), **KUTU** (donuk pasta). Net içerik modellendiğinde tamsayı taban birimle (ör. 2500 g, 750 ml, 2000 ml) tanımlayıcı alandır, operasyonel miktar değildir. Onaylı gruplarda ticari birimi koli olan varyant yoktur; B2B koli (kasa) modu ve snapshot'lı `box_count` (koli içi adet) değişmez.
-- **`variant_key`** kullanım tipini içerir: `usage_type | roast_level | weight_g | packaging_code | box_config` (`usage_type ∈ {espresso, filtre, -}`) — aynı aile adı altında espresso ve filtre ayrı SKU'dur (ADR-016 K6/2).
 - **Donuk pasta kutu içi parça sayısı** SKU'ya özgüdür (cheesecake 12 dilim; dilimli pastalar 12 dilim; mono / cup ürüne özgü, kategori geneli değer yok) ve **koli çarpanı `box_count` değildir** (ADR-016 K7/5); kutu konfigürasyonu değişirse yeni SKU; sipariş satırı kutu konfigürasyonu + fiyat snapshot'lar.
+- Bulk (dökme kg) envanteri ve kg → paket dönüşümü **V1 dışıdır**.
 - Somut B2B satır → varyant eşleme tablosu, kavrum ekseni ve varyant başına koli içi adet / kutu içi parça sayısı **veri görevidir** (PHASE0 B6a / B6e veri kalemleri — açık; modelleme kuralı karar).
 
 ---
@@ -587,7 +565,7 @@ InventoryReservation     (sipariş satırı + nesil başına; ACTIVE / RELEASED 
 InventoryReservationEvent(RESERVE / RELEASE / COMMIT — yalnız reserved)
 ```
 
-**V2.1 tanımlar (REQ §31.1, ADR-016 K1–K2):**
+**Tanımlar (REQ §31.1, ADR-016 K1–K2):**
 
 | Değer | Alan | Tanım |
 |---|---|---|
@@ -608,7 +586,7 @@ InventoryReservationEvent(RESERVE / RELEASE / COMMIT — yalnız reserved)
 
 Sadece `quantity = 42` saklayan kör model yeterli değildir.
 
-**V2.1:** ledger iki ayrı kayıt türünden oluşur; ikisi **birbirine karıştırılmaz** (ADR-016 K2).
+Ledger iki ayrı kayıt türünden oluşur; ikisi **birbirine karıştırılmaz** (ADR-016 K2).
 
 ## 17.1 Fiziksel hareketler — yalnız `on_hand`
 
@@ -621,7 +599,7 @@ ADJUST_UP     (+)  sayım / manuel düzeltme (artış)     reason COUNT_ADJUSTME
 ADJUST_DOWN   (−)  sayım / manuel düzeltme (azalış)    reason COUNT_ADJUSTMENT | MANUAL_ADJUSTMENT
 ```
 
-Her hareket: `qty INTEGER CHECK (qty > 0)`, açık `direction IN|OUT`, `reason NOT NULL`, `ref_type/ref_id`, actor, audit. V2.0'daki `PRODUCTION / SALE / RETURN / DAMAGE / WASTE / COUNT_ADJUSTMENT / MANUAL_ADJUSTMENT` sebepleri bu tiplere eşlenir; **`RESERVATION` ve `RELEASE` fiziksel hareket değildir** ve bu listeden çıkarılmıştır.
+Her hareket: `qty INTEGER CHECK (qty > 0)`, açık `direction IN|OUT`, `reason NOT NULL`, `ref_type/ref_id`, actor, audit. `PRODUCTION / PURCHASE / SALE / RETURN / DAMAGE / WASTE / COUNT_ADJUSTMENT / MANUAL_ADJUSTMENT` sebepleri bu tiplere eşlenir; **`RESERVATION` ve `RELEASE` fiziksel hareket değildir** ve bu listede yer almaz (rezervasyon olayları: §17.2).
 
 ## 17.2 Rezervasyon olayları — yalnız `reserved`
 
@@ -662,7 +640,7 @@ kanal uygunluğu = yalnız B2B (donuk grup)
 → "İşletmelere Özel" — iletişim / teklif CTA (stok durumu gösterilmez)
 ```
 
-**V2.2 (B5 — 2026-09-17):** kategori taksonomisi ile kanal uygunluğu ayrı niteliklerdir; donuk grup (donuk pastalar, Frozen Lemonade, Frozen Orange Juice) public'te görünebilir ama B2C satın alımına kapalıdır (REQ §12, §30).
+Kategori taksonomisi ile kanal uygunluğu ayrı niteliklerdir; donuk grup (donuk pastalar, Frozen Lemonade, Frozen Orange Juice) public'te görünebilir ama B2C satın alımına kapalıdır (REQ §12, §30; B5 — 2026-09-17).
 
 Miktar public API'ye gönderilmek zorunda değildir.
 
@@ -720,7 +698,9 @@ source_order_id        (iptal sonrası tekrar siparişte kaynak referansı; opsi
 
 gibi immutable geçmiş bilgileri korur.
 
-**V2.1:** `variant_id` **zorunludur** — yalnız ürüne bağlı satır olamaz (ADR-016 K6); `variant_snapshot` stok-belirleyici nitelikleri (kavrum, gramaj, ambalaj, kutu konfigürasyonu) ve `stock_unit`'i dondurur. Teslimat adresi snapshot'ı ve kargo / toplam kalemleri F13 kapsamında açıktır. **V2.2:** KDV oranı kaynağı (V1 kontrollü Excel → tam varyant; sonra Logo malzeme kartı salt-okunur) ve her sipariş satırında uygulanan **KDV oranı snapshot'ı** B4d ile karara bağlandı (2026-09-17); satır ayrıca uygulanan **satın alma maliyeti ve satış fiyatı snapshot'ını** taşır (B6i) — sonraki oran / maliyet değişikliği geçmiş siparişi değiştirmez (REQ §7.1, §82).
+`variant_id` **zorunludur** — yalnız ürüne bağlı satır olamaz (ADR-016 K6); `variant_snapshot` stok-belirleyici nitelikleri (kavrum / kullanım tipi, gramaj, ambalaj, kutu konfigürasyonu) ve `stock_unit`'i dondurur. Teslimat adresi snapshot'ı ve kargo / toplam kalemleri F13 kapsamında açıktır.
+
+KDV oranı kaynağı (V1 kontrollü Excel → tam varyant; sonra Logo malzeme kartı salt-okunur) ve her sipariş satırında uygulanan **KDV oranı snapshot'ı** B4d ile karara bağlandı (2026-09-17); satır ayrıca uygulanan **satın alma maliyeti ve satış fiyatı snapshot'ını** taşır (B6i) — sonraki oran / maliyet değişikliği geçmiş siparişi değiştirmez (REQ §7.1, §82).
 
 ---
 
@@ -750,7 +730,7 @@ DELIVERED → PREPARING
 
 normal UI aksiyonu değildir.
 
-**V2.1:** `SHIPPED` geçişi her kanalda rezervasyonu kapatır ve fiziksel stoğu düşürür (COMMIT + SHIP, §17.3). `CANCELLED` terminaldir; iptal edilen sipariş yeniden açılmaz, tekrar = yeni sipariş (REQ §31.6). B2B kendi durum sözlüğünü korur ve rezervasyon etrafında iki durum ekler: `rezervasyon_bekliyor → onay | rezervasyon_basarisiz`; `iptal` terminal (ADR-016 K4, K9).
+`SHIPPED` geçişi her kanalda rezervasyonu kapatır ve fiziksel stoğu düşürür (COMMIT + SHIP, §17.3). `CANCELLED` terminaldir; iptal edilen sipariş yeniden açılmaz, tekrar = yeni sipariş (REQ §31.6). B2B kendi durum sözlüğünü korur ve rezervasyon etrafında iki durum ekler: `rezervasyon_bekliyor → onay | rezervasyon_basarisiz`; `iptal` terminal (ADR-016 K4, K9).
 
 ---
 
@@ -810,7 +790,7 @@ SHIPPED → COMMIT + SHIP (fiziksel düşüş sevkiyatta)
 
 Reservation TTL yönetilebilir (TTL'in PSP 3DS oturum süresiyle ilişkisi H10 — açık, ADR-007).
 
-**V2.1:** ödeme başarısı fiziksel stoğu düşürmez; kullanılabilir stok zaten rezervasyonla ayrılmıştır (REQ §41, ADR-016 K2/9).
+Ödeme başarısı fiziksel stoğu düşürmez; kullanılabilir stok zaten rezervasyonla ayrılmıştır (REQ §41, ADR-016 K2/9).
 
 ---
 
@@ -831,7 +811,9 @@ Worker:
 - stok rezervasyonunu bırakır
 - kullanıcıya bildirim gönderebilir
 
-**V2.1:** süre dolumu yalnız `expires_at` dolu (ödenmemiş) rezervasyonlar içindir; ödeme alındığında rezervasyon kalıcılaşır ve sevkiyata kadar korunur. B2B rezervasyonlarında süre dolumu yoktur (ADR-016 K5). **V2.2 (B6f — 2026-09-17):** B2B eskalasyon saati siparişin ilk rezervasyon anından işler, personel onayı sıfırlamaz; 72 saat kararını **yalnız Yönetici** verir (sürdür / uzat audit'li; ret / iptal = sipariş düzeyi idempotent CANCEL op — B6k).
+Süre dolumu yalnız `expires_at` dolu (ödenmemiş) rezervasyonlar içindir; ödeme alındığında rezervasyon kalıcılaşır ve sevkiyata kadar korunur. B2B rezervasyonlarında süre dolumu yoktur (ADR-016 K5).
+
+**B2B eskalasyonu (B6f — 2026-09-17):** eskalasyon saati siparişin ilk rezervasyon anından işler, personel onayı sıfırlamaz; 72 saat kararını **yalnız Yönetici** verir (sürdür / uzat audit'li; ret / iptal = sipariş düzeyi idempotent CANCEL op — B6k).
 
 ---
 
@@ -907,7 +889,7 @@ Görevler:
 - rezervasyon eskalasyonu (24 / 48 / 72 saat bayrakları + bildirim; otomatik serbest bırakma yok — ADR-016 K5)
 - stok mutabakatı (B2B'den imzalı salt-okunur anlık görüntü çekme, invariant doğrulama, deterministik onarım; `INCOMPLETE` koşuda onarım yok — ADR-016 K11)
 
-**V2.1:** B2B tarafında zamanlayıcı yoktur; platformun mutabakat çekmesi B2B'nin bekleyen işlemlerini sonuçlandırma "tik"idir (ADR-016 K4-R).
+B2B tarafında zamanlayıcı yoktur; platformun mutabakat çekmesi B2B'nin bekleyen işlemlerini sonuçlandırma "tik"idir (ADR-016 K4-R).
 
 ---
 
@@ -1448,9 +1430,7 @@ Uygulama validasyonu tek başına yeterli değildir.
 - unique idempotency / operation key (`operations(id PK, namespace, operation_id; UNIQUE (namespace, operation_id))`; olaylarda `UNIQUE (operation_ref, reservation_id, action)`; `variant_external_codes UNIQUE(system, code)`; `sellable_variants UNIQUE(product_id, variant_key)`)
 - reservation validity (sipariş satırı başına tek ACTIVE nesil)
 
-**V2.1:** `reserved <= on_hand` sert kısıt değildir (§16 shortage); ayrıntı ADR-016 K2.
-
-DB seviyesinde korunur.
+DB seviyesinde korunur. `reserved <= on_hand` ise sert kısıt değildir (§16 shortage); ayrıntı ADR-016 K2.
 
 ---
 
@@ -1479,7 +1459,7 @@ Zorunlu alanlar:
 - background notification handler
 - inventory reserve / release / adjust / cancel / commit (her biri kendi işlem kimliğiyle)
 
-**V2.1 — kimlik sınıfları (ADR-016 K10):** gönderim kimliği (`submission_id`, istemci üretir, kanonik istek parmak iziyle saklanır), sipariş kimliği, rezervasyon kimliği + nesli, işlem kimliği (`operation_id` = `Idempotency-Key`, çağrıdan **önce** kalıcı yazılır). `order_id + geçiş` evrensel anahtar olarak **kullanılmaz**. Aynı anahtar + aynı gövde → kayıtlı sonuç; aynı anahtar + farklı gövde → 422; belirsiz sonuç → `operations/{id}` sorgusu → `abandon` (mezar taşı) ile çitleme; geçen süre tek başına sonuç sayılmaz.
+**Kimlik sınıfları (ADR-016 K10):** gönderim kimliği (`submission_id`, istemci üretir, kanonik istek parmak iziyle saklanır), sipariş kimliği, rezervasyon kimliği + nesli, işlem kimliği (`operation_id` = `Idempotency-Key`, çağrıdan **önce** kalıcı yazılır). `order_id + geçiş` evrensel anahtar olarak **kullanılmaz**. Aynı anahtar + aynı gövde → kayıtlı sonuç; aynı anahtar + farklı gövde → 422; belirsiz sonuç → `operations/{id}` sorgusu → `abandon` (mezar taşı) ile çitleme; geçen süre tek başına sonuç sayılmaz.
 
 ---
 
@@ -1856,7 +1836,7 @@ Gerçek ölçek ihtiyacı olmadan distributed system kurulmaz.
 
 # 87. B2B Integration Contract
 
-**V2.1 (2026-09-16):** Audit (ADR-004) B2B'nin Inventory owner olmadığını kanıtladı; bu nedenle portların yönü V2.0'daki varsayımın **tersidir**: portlar **platformda sunulur**, B2B **istemcidir**. Ayrıntılı sözleşme: `docs/adr/ADR-016`.
+Audit (ADR-004) B2B'nin Inventory owner olmadığını kanıtladı; bu nedenle portlar **platformda sunulur**, B2B **istemcidir** (2026-09-16). Ayrıntılı sözleşme: `docs/adr/ADR-016`.
 
 ```text
 platform-api (owner)                          B2B (tüketici)
@@ -1930,7 +1910,7 @@ ile Logo/ERP adapter eklenebilir.
 
 Bu bugün sipariş domainini ERP'ye bağımlı yapmaz.
 
-**V2.2 (B6i / B4d — 2026-09-17):** satın alma maliyeti ve ürün KDV oranı V1'de kontrollü Excel içe aktarımından gelir (tam varyanta eşleme; belirsiz / eksik eşleme fail-closed). Sonraki aşamada bu iki veri Logo SQL'den **yalnız platform-api tarafında**, özel **salt-okunur** (yalnız SELECT) bir veritabanı kullanıcısıyla okunur; platform Logo verisine INSERT / UPDATE / DELETE yapmaz. Tablo / kolon adları belirlenmedi; sağlayıcı / ağ / güvenlik ayrıntıları ve Logo veritabanına erişim yolu altyapı işidir (B3 açık).
+**Maliyet ve KDV kaynağı (B6i / B4d — 2026-09-17):** satın alma maliyeti ve ürün KDV oranı V1'de kontrollü Excel içe aktarımından gelir (tam varyanta eşleme; belirsiz / eksik eşleme fail-closed). Sonraki aşamada bu iki veri Logo SQL'den **yalnız platform-api tarafında**, özel **salt-okunur** (yalnız SELECT) bir veritabanı kullanıcısıyla okunur; platform Logo verisine INSERT / UPDATE / DELETE yapmaz. Tablo / kolon adları belirlenmedi; sağlayıcı / ağ / güvenlik ayrıntıları ve Logo veritabanına erişim yolu altyapı işidir (B3 açık).
 
 ---
 
@@ -2027,15 +2007,13 @@ Nihai Türkçe URL standardı SEO/Design phase'de sabitlenir.
 
 # 97. Admin URL
 
-Öneri:
-
 ```text
 admin.larantecoffee.com
 ```
 
 Public DNS'ten tamamen gizli olmak güvenlik değildir.
 
-**V2.2 (B3 — 2026-09-17):** alan adı yönü kabul edildi — `www.larantecoffee.com` (kurumsal site + public B2C), `admin.larantecoffee.com` (yönetim), `b2b.larantecoffee.com` (B2B); DNS / hosting uygulama ayrıntıları ve sağlayıcı seçimleri açıktır (PHASE0 B3, B7).
+**Alan adı yönü (B3 — 2026-09-17, kabul):** `www.larantecoffee.com` (kurumsal site + public B2C), `admin.larantecoffee.com` (yönetim), `b2b.larantecoffee.com` (B2B); DNS / hosting uygulama ayrıntıları ve sağlayıcı seçimleri açıktır (PHASE0 B3, B7).
 
 Auth + 2FA + authorization zorunlu kalır.
 
@@ -2046,6 +2024,8 @@ Auth + 2FA + authorization zorunlu kalır.
 ```text
 b2b.larantecoffee.com
 ```
+
+Alan adı yönü kabul edildi (B3 — 2026-09-17; ayrıntı §97).
 
 ---
 
@@ -2087,15 +2067,17 @@ ADR-016-inventory-reservation-contract   (2026-09-16: stok miktar modeli + B2B r
 ADR-017-deployment-portability           (2026-09-16 öncesi "ADR-016"; **henüz yazılmadı** — deployment / sağlayıcı seçimleri B3 / B7 ile tarihli beklemede 2026-09-18, Phase 1'i bloklamaz)
 ```
 
+Onaylı ADR'ler (2026-09-18): ADR-001, ADR-004, ADR-015, ADR-016 (`docs/adr/`).
+
 ---
 
 # 101. Uygulama Fazları
 
-**V2.1 (H6):** Bu bölümdeki Faz 0–11 sırası ile `docs/plan/LARANTE_MASTER_PLAN_2026-09-15.md` §18'deki P0–P12 (+7B) sırası iki farklı resmi harita oluşturuyordu. **Master plan §18 yetkilidir**; bu bölüm kapsam listesi olarak kalır. Eşleme:
+**Yetkili faz haritası `docs/plan/LARANTE_MASTER_PLAN_2026-09-15.md` §18'dir** (P0–P12, +7B; H6); bu bölümdeki Faz 0–11 sırası kapsam listesi olarak kalır. Eşleme:
 
 | ARCH Faz | Master plan Phase |
 |---|---|
-| Faz 0 audit + foundation | P0 (karar kilidi) + P1 (foundation; ledger yalnız ADR-016 onaylıysa) |
+| Faz 0 audit + foundation | P0 (karar kilidi) + P1 (foundation + envanter ledger'ı; ADR-016 onaylı 2026-09-18) |
 | Faz 1 design system | P2 |
 | Faz 2 identity + content + media | P3 (identity / audit / settings); içerik ve medya P4 / P9 |
 | Faz 3 catalog + retail pricing | P4 |
@@ -2134,7 +2116,7 @@ Paralelde:
 
 **Production stok implementation audit sonucu olmadan finalize edilmez.**
 
-**V2.1 çıkış koşulu (ADR-016 §6) — V2.3: sağlandı (2026-09-18):** ADR-004 + ADR-016 **onaylı**; stok birimi (B6b), rezervasyon anı / ömrü (B6c) karar; B6e **birim sınıfları** karar (paket / şişe / kutu / adet; proje sahibi hükmü: Phase 1 ledger kapısı sağlandı — varyant başına SKU verisi P4 / P7B veri hazırlığıdır, Phase 1'i bloklamaz); tam varyant eşleme **kuralı** kabul (B6a veri eşlemesi P4 import raporunda kanıtlanır). Kalıcı stok ledger'ı Phase 1'in ilk kodudur (`docs/tasks/PHASE1/P1-T05`); "ADR-016 onaysızsa P1 ledger'sız kapanır" yedek yolu tarihçedir.
+**Faz 0 çıkış koşulu (ADR-016 §6) — sağlandı (2026-09-18):** ADR-004 + ADR-016 **onaylı**; stok birimi (B6b), rezervasyon anı / ömrü (B6c) karar; B6e **birim sınıfları** karar (paket / şişe / kutu / adet; proje sahibi hükmü: Phase 1 ledger kapısı sağlandı — varyant başına SKU verisi P4 / P7B veri hazırlığıdır, Phase 1'i bloklamaz); tam varyant eşleme **kuralı** kabul (B6a veri eşlemesi P4 import raporunda kanıtlanır). Kalıcı stok ledger'ı Phase 1'in ilk kodudur (`docs/tasks/PHASE1/P1-T05`); "ADR-016 onaysızsa P1 ledger'sız kapanır" yedek yolu tarihçedir.
 
 ---
 
@@ -2488,7 +2470,7 @@ Provider-independent Payment/SMS/Shipping/Analytics
 ```
 
 **Bir sonraki zorunlu teknik adım:**  
-~~Mevcut B2B repository'nin Product / Inventory / ORM / Auth / API gerçekliğini incelemek ve `ADR-004-product-inventory-ownership-gate` kararını kapatmak.~~ **Tamamlandı (2026-09-18):** audit yapıldı, ADR-004 onaylandı. Sonraki adım: Phase 1 görev dosyaları (`docs/tasks/PHASE1/`) — scaffold / altyapı temelleri + onaylı envanter ledger / concurrency sözleşmesi.
+Phase 1 görev dosyaları (`docs/tasks/PHASE1/`) — scaffold / altyapı temelleri + onaylı envanter ledger / concurrency sözleşmesi. (B2B ownership audit'i ve ADR-004 kararı 2026-09-18'de tamamlandı.)
 
 **Bir sonraki tasarım dokümanı:**  
 `LARANTE_DESIGN_SYSTEM.md`
