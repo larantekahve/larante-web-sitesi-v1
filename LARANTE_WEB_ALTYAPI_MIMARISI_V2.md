@@ -502,7 +502,7 @@ Product: Cappadocia Espresso
 
 # 13. Varyant Patlamasını Önleme
 
-Öğütüm `PreparationOption` (sipariş hazırlama tercihi) olarak tutulur ve stok-belirleyici varyant kimliğinin (`variant_key`, aşağıda) parçası değildir; bu nedenle `roast × weight × grind` kombinasyonlarında öğütüm ayrı fiziksel stok kalemi üretmez — ayrı stok kalemini yalnız stok-belirleyici boyutlar belirler (REQ §15, R4; ADR-004 §3/1: `preparation_options` stok kalemi değil; ADR-016 K6/2; master plan §8: "öğütüm stok etkisi yok").
+Öğütüm `PreparationOption` (sipariş hazırlama tercihi) olarak tutulur ve stok-belirleyici varyant kimliğinin (`variant_key`, aşağıda) parçası değildir; bu nedenle `roast × weight × grind` kombinasyonlarında öğütüm ayrı fiziksel stok kalemi üretmez — ayrı stok kalemini yalnız stok-belirleyici boyutlar belirler (REQ §15, R4; ADR-004 §3.1: `preparation_options` stok kalemi değil; ADR-016 K6/2; master plan §8: "öğütüm stok etkisi yok").
 
 Stok modeli (ADR-016 K1, K6, K7; B6a / B6e KARAR 2026-09-17 — ADR-016 K1/2, K6/2, K7/5):
 
